@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sd-gold-primary: #D4AF37;
+  --color-sd-gold-glow: #FFD700;
+  --color-sd-gold-dark: #996515;
+  --color-sd-midnight: #0A0F1E;
+  --color-sd-glass: rgba(255, 255, 255, 0.05);
+  --color-sd-glass-border: rgba(255, 255, 255, 0.1);
+  --color-sd-text-main: #F8F9FA;
+  --color-sd-text-muted: #A0AEC0;
+}
+
+@layer base {
+  body {
+    background-color: var(--color-sd-midnight);
+    color: var(--color-sd-text-main);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .sd-glass-card {
+    background: var(--color-sd-glass);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--color-sd-glass-border);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  
+  .sd-gold-text {
+    background: linear-gradient(135deg, #D4AF37 0%, #FFFACD 50%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.3));
+  }
+  
+  .sd-button-luxury {
+    background: linear-gradient(135deg, var(--color-sd-gold-dark) 0%, var(--color-sd-gold-primary) 100%);
+    color: var(--color-sd-midnight);
+    font-weight: 700;
+    padding: 12px 32px;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border: none;
+    cursor: pointer;
+  }
+  
+  .sd-button-luxury:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.5);
+    filter: brightness(1.1);
+  }
+}
