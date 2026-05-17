@@ -26,7 +26,7 @@ export default function Launcher() {
           <path d="M12 18l-2-2m2 2l2-2"/>
         </svg>
       ),
-      url: 'https://sd-gold-hub.vercel.app/admin',
+      url: 'https://sd-gold-hub.vercel.app/admin?token=sd_super_admin_secret_token',
     },
     {
       id: 'bhulia',
