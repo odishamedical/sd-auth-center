@@ -71,6 +71,18 @@ export default function Launcher() {
     }
   };
 
+  const getSsoParams = () => {
+    if (!userEmail) return "?token=sd_user_sso_token";
+    const params = new URLSearchParams({
+      sso_email: userEmail,
+      sso_name: userName || userEmail.split("@")[0],
+      sso_avatar: userAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+      sso_role: userRole || "user",
+      token: userRole === 'super_admin' ? 'sd_super_admin_secret_token' : 'sd_user_sso_token'
+    });
+    return `?${params.toString()}`;
+  };
+
   const apps = [
     {
       id: 'gold',
@@ -91,7 +103,7 @@ export default function Launcher() {
           <path d="M12 18l-2-2m2 2l2-2"/>
         </svg>
       ),
-      url: userRole === 'super_admin' ? 'https://sd-gold-hub.vercel.app/admin?token=sd_super_admin_secret_token' : 'https://sd-gold-hub.vercel.app',
+      url: userRole === 'super_admin' ? `https://sd-gold-hub.vercel.app/admin${getSsoParams()}` : `https://sd-gold-hub.vercel.app${getSsoParams()}`,
     },
     {
       id: 'bhulia',
@@ -104,7 +116,7 @@ export default function Launcher() {
           <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
         </svg>
       ),
-      url: 'https://sd-bhulia-hub.vercel.app',
+      url: `https://sd-bhulia-hub.vercel.app${getSsoParams()}`,
     },
     {
       id: 'dehapa',
@@ -169,12 +181,12 @@ export default function Launcher() {
           
           <div className="relative">
             <button className="text-[#A0AEC0] hover:text-white transition-colors cursor-pointer">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.15:9c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </button>
             <span className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#0A0F1E] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">3</span>
           </div>
 
-          <div className="flex items-center gap-3 pl-6 border-l border-[#D bg-[#D4AF37]/20">
+          <div className="flex items-center gap-3 pl-6 border-l border-[#D4AF37]/20">
             {userAvatar ? (
               <img src={userAvatar} alt="" className="w-9 h-9 rounded-full object-cover border border-[#D4AF37]" />
             ) : (
