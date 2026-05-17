@@ -2,9 +2,70 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { auth, db, signOut, onAuthStateChanged } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function Launcher() {
   const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("user");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUserEmail(localStorage.getItem("sd_current_user_email"));
+      setUserName(localStorage.getItem("sd_current_user_name"));
+      setUserAvatar(localStorage.getItem("sd_current_user_avatar"));
+      setUserRole(localStorage.getItem("sd_current_user_role") || "user");
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDocRef = doc(db, "users", user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          let role = "user";
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            if (data.role) role = data.role;
+          }
+          const finalName = user.displayName || user.email?.split("@")[0] || "User";
+          const finalAvatar = user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80";
+
+          localStorage.setItem("sd_current_user_email", user.email || "");
+          localStorage.setItem("sd_current_user_name", finalName);
+          localStorage.setItem("sd_current_user_avatar", finalAvatar);
+          localStorage.setItem("sd_current_user_role", role);
+          localStorage.setItem("sd_current_user_uid", user.uid);
+
+          setUserEmail(user.email);
+          setUserName(finalName);
+          setUserAvatar(finalAvatar);
+          setUserRole(role);
+        } catch (err) {
+          console.error("Launcher role fetch error", err);
+        }
+      } else {
+        router.push('/');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
+  const handleSignOut = async () => {
+    if (confirm("Are you sure you want to sign out from your Sovereign Gmail session?")) {
+      try { await signOut(auth); } catch (e) { console.error(e); }
+      localStorage.removeItem("sd_current_user_email");
+      localStorage.removeItem("sd_current_user_name");
+      localStorage.removeItem("sd_current_user_avatar");
+      localStorage.removeItem("sd_current_user_role");
+      localStorage.removeItem("sd_current_user_uid");
+      router.push('/');
+    }
+  };
 
   const apps = [
     {
@@ -26,7 +87,7 @@ export default function Launcher() {
           <path d="M12 18l-2-2m2 2l2-2"/>
         </svg>
       ),
-      url: 'https://sd-gold-hub.vercel.app/admin?token=sd_super_admin_secret_token',
+      url: userRole === 'super_admin' ? 'https://sd-gold-hub.vercel.app/admin?token=sd_super_admin_secret_token' : 'https://sd-gold-hub.vercel.app',
     },
     {
       id: 'bhulia',
@@ -39,7 +100,7 @@ export default function Launcher() {
           <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
         </svg>
       ),
-      url: '#',
+      url: 'https://sd-bhulia-hub.vercel.app',
     },
     {
       id: 'dehapa',
@@ -103,20 +164,30 @@ export default function Launcher() {
           </button>
           
           <div className="relative">
-            <button className="text-[#A0AEC0] hover:text-white transition-colors">
+            <button className="text-[#A0AEC0] hover:text-white transition-colors cursor-pointer">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
             </button>
             <span className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#0A0F1E] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">3</span>
           </div>
 
           <div className="flex items-center gap-3 pl-6 border-l border-[#D4AF37]/20">
-            <div className="w-9 h-9 rounded-full overflow-hidden border border-[#D4AF37]/50">
-              <Image src="/sd_logo.png" alt="Profile" width={36} height={36} className="object-cover bg-black" />
-            </div>
+            {userAvatar ? (
+              <img src={userAvatar} alt="" className="w-9 h-9 rounded-full object-cover border border-[#D4AF37]" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-[#D4AF37] text-[#0A0F1E] flex items-center justify-center font-bold text-sm font-mono">
+                {userName ? userName.charAt(0).toUpperCase() : "U"}
+              </div>
+            )}
             <div className="flex flex-col hidden sm:flex">
-              <span className="text-sm font-semibold">Shyam Dash</span>
-              <span className="text-xs text-[#A0AEC0]">Super Admin <svg className="inline w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></span>
+              <span className="text-sm font-semibold text-white">{userName || userEmail?.split("@")[0] || "User"}</span>
+              <span className="text-xs text-[#D4AF37] tracking-widest uppercase font-mono">{userRole}</span>
             </div>
+            <button 
+              onClick={handleSignOut}
+              className="text-xs text-gray-500 hover:text-red-400 ml-4 transition-colors font-mono uppercase tracking-widest cursor-pointer"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </header>
