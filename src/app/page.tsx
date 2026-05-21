@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth, db, googleProvider, signInWithPopup } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -12,6 +12,17 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // 0. Capture Referral Code from URL
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref");
+      if (ref) {
+        localStorage.setItem("sd_pending_referral", ref);
+      }
+    }
+  }, []);
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -49,6 +60,8 @@ export default function Login() {
             localStorage.setItem("sd_current_user_role", data.role);
           }
         } else {
+          const pendingReferral = localStorage.getItem("sd_pending_referral") || null;
+          
           await setDoc(userDocRef, {
             uid: user.uid,
             email: user.email,
@@ -57,8 +70,12 @@ export default function Login() {
             role: userRole,
             createdAt: serverTimestamp(),
             lastLogin: serverTimestamp(),
-            linkedProjects: ["sd-auth-center"]
+            linkedProjects: ["sd-auth-center"],
+            referredBy: pendingReferral // Save the viral attribution!
           });
+          
+          // Clear the pending referral so we don't accidentally attribute it again
+          localStorage.removeItem("sd_pending_referral");
         }
       } catch (firestoreErr) {
         console.warn("Firestore background sync skipped (permission denied). Local session active.", firestoreErr);

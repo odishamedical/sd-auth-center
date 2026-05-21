@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { auth, db, signOut, onAuthStateChanged } from '../../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function Launcher() {
   const router = useRouter();
@@ -12,6 +12,8 @@ export default function Launcher() {
   const [userName, setUserName] = useState<string | null>(null);
   const [userAvatar, setUserAvatar] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string>("user");
+  const [userUid, setUserUid] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState<number>(0);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -19,6 +21,7 @@ export default function Launcher() {
       setUserName(localStorage.getItem("sd_current_user_name"));
       setUserAvatar(localStorage.getItem("sd_current_user_avatar"));
       setUserRole(localStorage.getItem("sd_current_user_role") || "user");
+      setUserUid(localStorage.getItem("sd_current_user_uid"));
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -51,6 +54,17 @@ export default function Launcher() {
         setUserName(finalName);
         setUserAvatar(finalAvatar);
         setUserRole(role);
+        setUserUid(user.uid);
+
+        // Fetch Viral Referral Count
+        try {
+          const q = query(collection(db, "users"), where("referredBy", "==", user.uid));
+          const snapshot = await getDocs(q);
+          setReferralCount(snapshot.size);
+        } catch (e) {
+          console.error("Failed to fetch referral count", e);
+        }
+
       } else {
         router.push('/');
       }
@@ -261,6 +275,55 @@ export default function Launcher() {
             </a>
           ))}
         </div>
+
+        {/* Viral Network Dashboard */}
+        {userUid && (
+          <div className="mt-16 w-full max-w-[1500px] px-4">
+            <div className="bg-[#1A2035]/80 backdrop-blur-md border border-[#D4AF37]/30 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 to-transparent pointer-events-none" />
+              
+              <div className="flex-1 z-10">
+                <h3 className="text-xl md:text-2xl font-bold text-white mb-2 tracking-wide font-serif">
+                  My <span className="text-[#D4AF37]">Viral Network</span>
+                </h3>
+                <p className="text-[#A0AEC0] text-sm md:text-base max-w-lg mb-4">
+                  Share your unique Sovereign Ecosystem link via WhatsApp. Every time a new user signs in using your link, they are permanently attributed to your network.
+                </p>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs uppercase tracking-widest text-[#A0AEC0]">Your Unique ID:</span>
+                  <code className="bg-[#0A0F1E] px-3 py-1.5 rounded-md border border-[#D4AF37]/20 text-[#D4AF37] font-mono text-sm shadow-inner">
+                    {userUid}
+                  </code>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center justify-center p-6 bg-[#0A0F1E]/50 border border-[#D4AF37]/20 rounded-2xl min-w-[200px] z-10">
+                <span className="text-5xl font-black text-[#D4AF37] tracking-tighter mb-1">
+                  {referralCount}
+                </span>
+                <span className="text-[10px] uppercase tracking-widest text-[#A0AEC0] font-bold">
+                  Successful Referrals
+                </span>
+              </div>
+              
+              <div className="z-10">
+                <button 
+                  onClick={() => {
+                    const shareUrl = `https://sd-gold-hub.vercel.app?ref=${userUid}`;
+                    const message = `Join the Shyam Dash Sovereign Ecosystem! Explore Gold, Handlooms, Health, and IT directly: ${shareUrl}`;
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, "_blank");
+                  }}
+                  className="flex items-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white px-6 py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.4)] cursor-pointer"
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.245 3.481 5.231 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.859c1.619.96 3.46 1.468 5.352 1.468 5.435-.002 9.851-4.418 9.853-9.853.001-2.635-1.023-5.114-2.885-6.976-1.862-1.863-4.341-2.888-6.977-2.887-5.435.002-9.851 4.418-9.853 9.853-.001 1.932.508 3.81 1.472 5.441l-1.002 3.659 3.754-.985zm9.588-6.353c-.524-.262-3.098-1.53-3.578-1.705-.48-.175-.83-.262-1.18.262-.35.524-1.355 1.705-1.66 2.055-.306.35-.612.394-1.136.131-.524-.262-2.213-.816-4.215-2.603-1.558-1.39-2.609-3.109-2.915-3.633-.306-.524-.033-.808.23-.107.235.262.524.524.787.787.262.262.35.524.525.875.175.35.087.656-.044.919-.131.262-1.18 2.844-1.617 3.894-.426.102-.853.088-1.18-.175-.382-.306-.382-.787-.382-.787v-.001c0-1.662 1.348-3.01 3.01-3.01h.001c1.237 0 2.308.75 2.771 1.832.22-.163.454-.316.702-.456.623-.35 1.312-.533 2.02-.533 2.321 0 4.209 1.888 4.209 4.209 0 .445-.07.88-.204 1.295-.401 1.248-1.576 2.148-2.956 2.148-.225 0-.447-.024-.664-.071z"/>
+                  </svg>
+                  Share to WhatsApp
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
