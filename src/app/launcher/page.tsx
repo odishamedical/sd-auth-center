@@ -130,7 +130,7 @@ export default function Launcher() {
           <path d="M6 12c1.5-1 3-1 3 1s-1.5 2-3 3 3 2 3 2" />
         </svg>
       ),
-      url: '#',
+      url: `https://sd-dehapa-hub.vercel.app${getSsoParams()}`,
     },
     {
       id: 'it',
@@ -145,7 +145,20 @@ export default function Launcher() {
           <circle cx="12" cy="12" r="3" />
         </svg>
       ),
-      url: '#',
+      url: `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
+    },
+    {
+      id: 'directory',
+      name: 'SD DIRECTORY',
+      tagline: 'Odisha Business Index',
+      desc: 'Odisha business directory index and local storefront claims.',
+      icon: (
+        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+        </svg>
+      ),
+      url: `https://sd-directory.vercel.app${getSsoParams()}`,
     }
   ];
 
@@ -216,7 +229,7 @@ export default function Launcher() {
           <p className="text-[#A0AEC0] text-sm md:text-base tracking-wider uppercase font-light">High-fidelity web UI for a luxury enterprise system</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 max-w-[1400px] w-full px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 md:gap-8 max-w-[1500px] w-full px-4">
           {apps.map((app, index) => (
             <a 
               key={app.id}
