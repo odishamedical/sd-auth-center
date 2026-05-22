@@ -13,13 +13,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // 0. Capture Referral Code from URL
+  // 0. Capture Referral Code and Redirect URI from URL
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get("ref");
+      const redirectUri = params.get("redirect_uri");
+      
       if (ref) {
         localStorage.setItem("sd_pending_referral", ref);
+      }
+      if (redirectUri) {
+        localStorage.setItem("sd_pending_redirect", redirectUri);
       }
     }
   }, []);
@@ -46,8 +51,22 @@ export default function Login() {
       localStorage.setItem("sd_current_user_role", userRole);
       localStorage.setItem("sd_current_user_uid", user.uid);
 
-      // Instant push to Launcher E.g. zero delay
-      router.push('/launcher');
+      // Role-Based Routing
+      const pendingRedirect = localStorage.getItem("sd_pending_redirect");
+      if (userRole === "super_admin") {
+        router.push('/launcher');
+      } else if (pendingRedirect) {
+        const token = "sd_user_sso_token";
+        const redirectUrl = new URL(pendingRedirect);
+        redirectUrl.searchParams.set("sso_email", user.email || "");
+        redirectUrl.searchParams.set("sso_name", finalName);
+        redirectUrl.searchParams.set("sso_avatar", finalAvatar);
+        redirectUrl.searchParams.set("sso_role", userRole);
+        redirectUrl.searchParams.set("token", token);
+        window.location.href = redirectUrl.toString();
+      } else {
+        router.push('/launcher');
+      }
 
       // Background Firestore Check/Update
       try {
@@ -91,10 +110,19 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setErrorMsg(null);
     setTimeout(() => {
+      const role = email.includes("admin") ? "super_admin" : "user";
       localStorage.setItem("sd_current_user_email", email);
       localStorage.setItem("sd_current_user_name", email.split("@")[0]);
-      localStorage.setItem("sd_current_user_role", email.includes("admin") ? "super_admin" : "user");
-      router.push('/launcher');
+      localStorage.setItem("sd_current_user_role", role);
+      
+      const pendingRedirect = localStorage.getItem("sd_pending_redirect");
+      if (role === "super_admin") {
+        router.push('/launcher');
+      } else if (pendingRedirect) {
+        window.location.href = `${pendingRedirect}?token=sd_user_sso_token&sso_email=${email}&sso_role=${role}`;
+      } else {
+        router.push('/launcher');
+      }
     }, 1500);
   };
 

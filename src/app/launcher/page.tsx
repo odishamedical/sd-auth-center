@@ -173,6 +173,21 @@ export default function Launcher() {
         </svg>
       ),
       url: `https://sd-directory.vercel.app${getSsoParams()}`,
+    },
+    {
+      id: 'news',
+      name: 'NEWS HUB',
+      tagline: 'Global & Local Media',
+      desc: 'Live news aggregation, reporter management, and localized broadcasting.',
+      icon: (
+        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v10a2 2 0 0 1-2 2Z" />
+          <path d="M14 2v6h6" />
+          <path d="M8 12h8" />
+          <path d="M8 16h8" />
+        </svg>
+      ),
+      url: `https://sd-news-hub.vercel.app${getSsoParams()}`,
     }
   ];
 
