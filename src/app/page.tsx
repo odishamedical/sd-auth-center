@@ -53,7 +53,7 @@ export default function Login() {
 
       // Role-Based Routing
       const pendingRedirect = localStorage.getItem("sd_pending_redirect");
-      if (userRole === "super_admin") {
+      if (userRole === "super_admin" || userRole === "admin" || userRole === "staff") {
         router.push('/launcher');
       } else if (pendingRedirect) {
         const token = "sd_user_sso_token";
@@ -65,7 +65,7 @@ export default function Login() {
         redirectUrl.searchParams.set("token", token);
         window.location.href = redirectUrl.toString();
       } else {
-        router.push('/launcher');
+        router.push('/profile');
       }
 
       // Background Firestore Check/Update
@@ -116,12 +116,12 @@ export default function Login() {
       localStorage.setItem("sd_current_user_role", role);
       
       const pendingRedirect = localStorage.getItem("sd_pending_redirect");
-      if (role === "super_admin") {
+      if (role === "super_admin" || role === "admin" || role === "staff") {
         router.push('/launcher');
       } else if (pendingRedirect) {
         window.location.href = `${pendingRedirect}?token=sd_user_sso_token&sso_email=${email}&sso_role=${role}`;
       } else {
-        router.push('/launcher');
+        router.push('/profile');
       }
     }, 1500);
   };

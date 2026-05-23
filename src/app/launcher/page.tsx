@@ -16,13 +16,17 @@ export default function Launcher() {
   const [referralCount, setReferralCount] = useState<number>(0);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+      const localRole = localStorage.getItem("sd_current_user_role");
+      if (localRole === "user") {
+        router.push("/profile");
+        return;
+      }
+
       setUserEmail(localStorage.getItem("sd_current_user_email"));
       setUserName(localStorage.getItem("sd_current_user_name"));
       setUserAvatar(localStorage.getItem("sd_current_user_avatar"));
-      setUserRole(localStorage.getItem("sd_current_user_role") || "user");
+      setUserRole(localRole || "user");
       setUserUid(localStorage.getItem("sd_current_user_uid"));
-    }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -54,6 +58,11 @@ export default function Launcher() {
         localStorage.setItem("sd_current_user_avatar", finalAvatar);
         localStorage.setItem("sd_current_user_role", role);
         localStorage.setItem("sd_current_user_uid", user.uid);
+
+        if (role === "user") {
+          router.push("/profile");
+          return;
+        }
 
         setUserEmail(user.email);
         setUserName(finalName);
@@ -122,7 +131,8 @@ export default function Launcher() {
           <path d="M12 18l-2-2m2 2l2-2"/>
         </svg>
       ),
-      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-gold-hub.vercel.app/admin${getSsoParams()}` : `https://sd-gold-hub.vercel.app${getSsoParams()}`,
+      url: `https://sd-gold-hub.vercel.app${getSsoParams()}`,
+      adminUrl: `https://sd-gold-hub.vercel.app/admin${getSsoParams()}`,
     },
     {
       id: 'bhulia',
@@ -164,7 +174,8 @@ export default function Launcher() {
           <circle cx="12" cy="12" r="3" />
         </svg>
       ),
-      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-it-hub-w3sk.vercel.app/admin${getSsoParams()}` : `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
+      url: `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
+      adminUrl: `https://sd-it-hub-w3sk.vercel.app/admin${getSsoParams()}`,
     },
     {
       id: 'directory',
@@ -177,7 +188,8 @@ export default function Launcher() {
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
         </svg>
       ),
-      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-directory.vercel.app/admin${getSsoParams()}` : `https://sd-directory.vercel.app${getSsoParams()}`,
+      url: `https://sd-directory.vercel.app${getSsoParams()}`,
+      adminUrl: `https://sd-directory.vercel.app/admin${getSsoParams()}`,
     },
     {
       id: 'news',
@@ -192,7 +204,8 @@ export default function Launcher() {
           <path d="M8 16h8" />
         </svg>
       ),
-      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-news-hub.vercel.app/admin${getSsoParams()}` : `https://sd-news-hub.vercel.app${getSsoParams()}`,
+      url: `https://sd-news-hub.vercel.app${getSsoParams()}`,
+      adminUrl: `https://sd-news-hub.vercel.app/admin${getSsoParams()}`,
     }
   ];
 
@@ -284,9 +297,17 @@ export default function Launcher() {
                     {app.name}
                   </h3>
                   <h4 className="text-white text-base mb-4 font-medium">{app.tagline}</h4>
-                  <p className="text-[#A0AEC0] text-xs leading-relaxed max-w-[200px] mx-auto opacity-80">
+                  <p className="text-[#A0AEC0] text-xs leading-relaxed max-w-[200px] mx-auto opacity-80 mb-6">
                     {app.desc}
                   </p>
+                  
+                  {app.adminUrl && (userRole === 'super_admin' || userRole === 'admin') && (
+                    <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20" onClick={(e) => e.stopPropagation()}>
+                      <a href={app.adminUrl} className="px-5 py-2.5 bg-gradient-to-r from-[#996515] to-[#C5A059] text-[#0A1021] font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)] hover:brightness-110 hover:scale-105 transition-all">
+                        Admin Panel
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
