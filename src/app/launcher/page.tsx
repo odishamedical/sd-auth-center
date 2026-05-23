@@ -159,7 +159,7 @@ export default function Launcher() {
           <circle cx="12" cy="12" r="3" />
         </svg>
       ),
-      url: `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
+      url: userRole === 'super_admin' ? `https://sd-it-hub-w3sk.vercel.app/admin${getSsoParams()}` : `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
     },
     {
       id: 'directory',
