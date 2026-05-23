@@ -177,7 +177,7 @@ export default function Launcher() {
           <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
         </svg>
       ),
-      url: `https://sd-directory.vercel.app${getSsoParams()}`,
+      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-directory.vercel.app/admin${getSsoParams()}` : `https://sd-directory.vercel.app${getSsoParams()}`,
     },
     {
       id: 'news',
@@ -192,7 +192,7 @@ export default function Launcher() {
           <path d="M8 16h8" />
         </svg>
       ),
-      url: `https://sd-news-hub.vercel.app${getSsoParams()}`,
+      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-news-hub.vercel.app/admin${getSsoParams()}` : `https://sd-news-hub.vercel.app${getSsoParams()}`,
     }
   ];
 
