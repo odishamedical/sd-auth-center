@@ -117,7 +117,7 @@ export default function Launcher() {
           <path d="M12 18l-2-2m2 2l2-2"/>
         </svg>
       ),
-      url: userRole === 'super_admin' ? `https://sd-gold-hub.vercel.app/admin${getSsoParams()}` : `https://sd-gold-hub.vercel.app${getSsoParams()}`,
+      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-gold-hub.vercel.app/admin${getSsoParams()}` : `https://sd-gold-hub.vercel.app${getSsoParams()}`,
     },
     {
       id: 'bhulia',
@@ -159,7 +159,7 @@ export default function Launcher() {
           <circle cx="12" cy="12" r="3" />
         </svg>
       ),
-      url: userRole === 'super_admin' ? `https://sd-it-hub-w3sk.vercel.app/admin${getSsoParams()}` : `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
+      url: (userRole === 'super_admin' || userRole === 'admin') ? `https://sd-it-hub-w3sk.vercel.app/admin${getSsoParams()}` : `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
     },
     {
       id: 'directory',
