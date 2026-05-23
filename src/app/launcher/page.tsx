@@ -34,6 +34,11 @@ export default function Launcher() {
             const data = userDocSnap.data();
             if (data.role) role = data.role;
           }
+          
+          // Force super_admin for admin emails even if Firestore is outdated
+          if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
+            role = "super_admin";
+          }
         } catch (err) {
           console.warn("Launcher role fetch error (permission denied), using fallback", err);
           if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
