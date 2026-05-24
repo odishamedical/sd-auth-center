@@ -149,6 +149,10 @@ export default function Launcher() {
     return `?${params.toString()}`;
   };
 
+  const getProjectUrl = (baseUrl: string, adminPath: string) => {
+    return `${baseUrl}${adminPath}${getSsoParams()}`;
+  };
+
   const projects = [
     { name: "Gold Hub", url: "https://sd-gold-hub.vercel.app", adminPath: "/admin", icon: "💛", desc: "Gold Jewelry Marketplace & Vault Controls" },
     { name: "Sambalpuri Hub", url: "https://sd-bhulia-hub.vercel.app", adminPath: "/franchise/dashboard", icon: "🧵", desc: "Heritage Textiles, Weavers, & Escrow Ledger" },

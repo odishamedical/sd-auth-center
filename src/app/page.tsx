@@ -110,7 +110,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setErrorMsg(null);
     setTimeout(() => {
-      const role = email.includes("admin") ? "super_admin" : "user";
+      const role: string = email.includes("admin") ? "super_admin" : "user";
       localStorage.setItem("sd_current_user_email", email);
       localStorage.setItem("sd_current_user_name", email.split("@")[0]);
       localStorage.setItem("sd_current_user_role", role);
