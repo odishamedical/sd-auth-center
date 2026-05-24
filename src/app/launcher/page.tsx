@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { auth, db, signOut, onAuthStateChanged } from '../../lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, setDoc } from 'firebase/firestore';
 
 export default function Launcher() {
   const router = useRouter();
@@ -15,18 +15,30 @@ export default function Launcher() {
   const [userUid, setUserUid] = useState<string | null>(null);
   const [referralCount, setReferralCount] = useState<number>(0);
 
-  useEffect(() => {
-      const localRole = localStorage.getItem("sd_current_user_role");
-      if (localRole === "user") {
-        router.push("/profile");
-        return;
-      }
+  // Admin Delegation Form State
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminName, setNewAdminName] = useState("");
+  const [selectedProject, setSelectedProject] = useState("Gold Hub");
+  const [selectedRole, setSelectedRole] = useState("admin");
+  const [delegationLoading, setDelegationLoading] = useState(false);
 
-      setUserEmail(localStorage.getItem("sd_current_user_email"));
-      setUserName(localStorage.getItem("sd_current_user_name"));
-      setUserAvatar(localStorage.getItem("sd_current_user_avatar"));
-      setUserRole(localRole || "user");
-      setUserUid(localStorage.getItem("sd_current_user_uid"));
+  // UI Interactive States
+  const [activeChartTab, setActiveChartTab] = useState<"sales" | "users">("sales");
+  const [hoveredPoint, setHoveredPoint] = useState<{ x: number, y: number, label: string, val: string } | null>(null);
+  const [activeSection, setActiveSection] = useState<"overview" | "delegations" | "systems">("overview");
+
+  useEffect(() => {
+    const localRole = localStorage.getItem("sd_current_user_role");
+    if (localRole === "user") {
+      router.push("/profile");
+      return;
+    }
+
+    setUserEmail(localStorage.getItem("sd_current_user_email"));
+    setUserName(localStorage.getItem("sd_current_user_name"));
+    setUserAvatar(localStorage.getItem("sd_current_user_avatar"));
+    setUserRole(localRole || "user");
+    setUserUid(localStorage.getItem("sd_current_user_uid"));
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -39,12 +51,11 @@ export default function Launcher() {
             if (data.role) role = data.role;
           }
           
-          // Force super_admin for admin emails even if Firestore is outdated
           if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
             role = "super_admin";
           }
         } catch (err) {
-          console.warn("Launcher role fetch error (permission denied), using fallback", err);
+          console.warn("Launcher role fetch error, using fallback", err);
           if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
             role = "super_admin";
           }
@@ -70,7 +81,6 @@ export default function Launcher() {
         setUserRole(role);
         setUserUid(user.uid);
 
-        // Fetch Viral Referral Count
         try {
           const q = query(collection(db, "users"), where("referredBy", "==", user.uid));
           const snapshot = await getDocs(q);
@@ -99,6 +109,34 @@ export default function Launcher() {
     }
   };
 
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAdminEmail.trim() || !newAdminName.trim()) {
+      alert("Please fill out all fields.");
+      return;
+    }
+    setDelegationLoading(true);
+    try {
+      const docId = newAdminEmail.trim().replace(/\./g, "_");
+      await setDoc(doc(db, "role_delegations", docId), {
+        email: newAdminEmail.trim(),
+        name: newAdminName.trim(),
+        project: selectedProject,
+        role: selectedRole,
+        assignedAt: new Date().toISOString(),
+        assignedBy: userEmail
+      });
+      alert(`Delegated ${selectedRole} permissions for ${newAdminEmail} on ${selectedProject} successfully!`);
+      setNewAdminEmail("");
+      setNewAdminName("");
+    } catch (err) {
+      console.error("Delegation failed", err);
+      alert("Role delegation failed. Make sure you are logged in as Super Admin.");
+    } finally {
+      setDelegationLoading(false);
+    }
+  };
+
   const getSsoParams = () => {
     if (!userEmail) return "?token=sd_user_sso_token";
     const params = new URLSearchParams({
@@ -111,261 +149,481 @@ export default function Launcher() {
     return `?${params.toString()}`;
   };
 
-  const apps = [
-    {
-      id: 'gold',
-      name: 'GOLD HUB',
-      tagline: 'Luxury Assets',
-      desc: 'Premium gold jewelry marketplace and verified vendor management ecosystem.',
-      icon: (
-        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(212,175,55,0.5)]" viewBox="0 0 24 24" fill="none" stroke="url(#gold-gradient)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <defs>
-            <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#D4AF37" />
-              <stop offset="50%" stopColor="#FFFACD" />
-              <stop offset="100%" stopColor="#D4AF37" />
-            </linearGradient>
-          </defs>
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          <circle cx="12" cy="10" r="3"/>
-          <path d="M12 18l-2-2m2 2l2-2"/>
-        </svg>
-      ),
-      url: `https://sd-gold-hub.vercel.app${getSsoParams()}`,
-      adminUrl: `https://sd-gold-hub.vercel.app/admin${getSsoParams()}`,
-    },
-    {
-      id: 'bhulia',
-      name: 'BHULIA HUB',
-      tagline: 'Handcrafted Textiles',
-      desc: 'Authentic handloom heritage, crafted textiles, and regional artisan networks.',
-      icon: (
-        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" />
-          <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-        </svg>
-      ),
-      url: `https://sd-bhulia-hub.vercel.app${getSsoParams()}`,
-    },
-    {
-      id: 'dehapa',
-      name: 'DEHAPA HEALTH',
-      tagline: 'Wellness Solutions',
-      desc: 'Advanced medical diagnostics, wellness integrations, and healthcare tracking.',
-      icon: (
-        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-          <path d="M18 12c-1.5-1-3-1-3 1s1.5 2 3 3-3 2-3 2" />
-          <path d="M6 12c1.5-1 3-1 3 1s-1.5 2-3 3 3 2 3 2" />
-        </svg>
-      ),
-      url: `https://sd-dehapa-hub.vercel.app${getSsoParams()}`,
-    },
-    {
-      id: 'it',
-      name: 'IT HUB',
-      tagline: 'Digital Infrastructure',
-      desc: 'Custom domains, white-label systems, analytics, and ecosystem hosting.',
-      icon: (
-        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="16 18 22 12 16 6" />
-          <polyline points="8 6 2 12 8 18" />
-          <line x1="12" y1="4" x2="12" y2="20" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      ),
-      url: `https://sd-it-hub-w3sk.vercel.app${getSsoParams()}`,
-      adminUrl: `https://sd-it-hub-w3sk.vercel.app/admin${getSsoParams()}`,
-    },
-    {
-      id: 'directory',
-      name: 'SD DIRECTORY',
-      tagline: 'Odisha Business Index',
-      desc: 'Odisha business directory index and local storefront claims.',
-      icon: (
-        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-        </svg>
-      ),
-      url: `https://sd-directory.vercel.app${getSsoParams()}`,
-      adminUrl: `https://sd-directory.vercel.app/admin${getSsoParams()}`,
-    },
-    {
-      id: 'news',
-      name: 'NEWS HUB',
-      tagline: 'Global & Local Media',
-      desc: 'Live news aggregation, reporter management, and localized broadcasting.',
-      icon: (
-        <svg className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h10l6 6v10a2 2 0 0 1-2 2Z" />
-          <path d="M14 2v6h6" />
-          <path d="M8 12h8" />
-          <path d="M8 16h8" />
-        </svg>
-      ),
-      url: `https://sd-news-hub.vercel.app${getSsoParams()}`,
-      adminUrl: `https://sd-news-hub.vercel.app/admin${getSsoParams()}`,
-    }
+  const projects = [
+    { name: "Gold Hub", url: "https://sd-gold-hub.vercel.app", adminPath: "/admin", icon: "💛", desc: "Gold Jewelry Marketplace & Vault Controls" },
+    { name: "Sambalpuri Hub", url: "https://sd-bhulia-hub.vercel.app", adminPath: "/franchise/dashboard", icon: "🧵", desc: "Heritage Textiles, Weavers, & Escrow Ledger" },
+    { name: "Telemedicine", url: "https://sd-dehapa-hub.vercel.app", adminPath: "/portal", icon: "🏥", desc: "Patient Portal & Diagnostic Pipelines" },
+    { name: "News", url: "https://sd-news-hub.vercel.app", adminPath: "/admin", icon: "📰", desc: "Localized Media & Reporter Credentials" },
+    { name: "Directory", url: "https://sd-directory.vercel.app", adminPath: "/admin", icon: "🧭", desc: "Artisan Listings Index & Store Claims" },
+    { name: "IT Service", url: "https://sd-it-hub-w3sk.vercel.app", adminPath: "/admin", icon: "💻", desc: "Ecosystem SaaS Nodes & Hosting Uptime" }
   ];
 
   return (
-    <div className="min-h-screen bg-[#0A0F1E] flex flex-col font-sans text-white relative overflow-hidden">
+    <div className="min-h-screen bg-[#040815] flex flex-col font-sans text-white relative overflow-hidden">
+      
       {/* Background Sweeping Lines */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.05]">
         <svg className="absolute w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
-          <path d="M0,50 Q25,30 50,50 T100,50" fill="none" stroke="#D4AF37" strokeWidth="0.2" />
-          <path d="M0,60 Q25,40 50,60 T100,60" fill="none" stroke="#D4AF37" strokeWidth="0.1" />
-          <path d="M0,80 Q30,100 60,80 T100,90" fill="none" stroke="#D4AF37" strokeWidth="0.2" />
-          <path d="M0,20 Q40,0 70,30 T100,10" fill="none" stroke="#D4AF37" strokeWidth="0.15" />
+          <path d="M0,50 Q25,30 50,50 T100,50" fill="none" stroke="#C5A059" strokeWidth="0.2" />
+          <path d="M0,80 Q30,100 60,80 T100,90" fill="none" stroke="#C5A059" strokeWidth="0.2" />
+          <path d="M0,20 Q40,0 70,30 T100,10" fill="none" stroke="#C5A059" strokeWidth="0.15" />
         </svg>
       </div>
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#D4AF37]/10 rounded-full blur-[100px] z-0" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#D4AF37]/5 rounded-full blur-[120px] z-0" />
-
+      <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-[#C5A059]/5 rounded-full blur-[150px] z-0" />
+      
       {/* Global Header */}
-      <header className="h-[72px] border-b border-[#D4AF37]/20 bg-[#0A0F1E]/80 backdrop-blur-xl flex items-center justify-between px-8 sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <Image src="/sd_logo.png" alt="Logo" width={32} height={32} className="object-contain" />
-          <div className="flex flex-col">
-            <h1 className="text-sm font-semibold tracking-wider text-white">Universal</h1>
-            <h1 className="text-sm font-light tracking-widest text-[#A0AEC0]">Ecosystem</h1>
+      <header className="h-[56px] border-b border-[#C5A059]/20 bg-[#090F1D]/80 backdrop-blur-xl flex items-center justify-between px-6 sticky top-0 z-50">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-[#FFE082] via-[#C5A059] to-[#996515] p-[1px] flex-shrink-0">
+            <div className="w-full h-full bg-[#060c18] rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-[#C5A059]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xs font-black tracking-[0.2em] uppercase font-mono text-[#C5A059]">SD ECOSYSTEM</h1>
+            <span className="text-[9px] font-extrabold bg-[#C5A059]/20 text-[#C5A059] px-1.5 py-0.5 rounded border border-[#C5A059]/30 uppercase tracking-widest font-mono">
+              Command Center
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <button className="flex items-center gap-2 bg-[#1A2035] border border-[#D4AF37]/30 hover:border-[#D4AF37] px-4 py-2 rounded-lg text-sm text-[#D4AF37] transition-all">
-            App Switcher
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          
-          <div className="relative">
-            <button className="text-[#A0AEC0] hover:text-white transition-colors cursor-pointer">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.15:9c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-            </button>
-            <span className="absolute -top-1 -right-1 bg-[#D4AF37] text-[#0A0F1E] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">3</span>
-          </div>
-
-          <div className="flex items-center gap-3 pl-6 border-l border-[#D4AF37]/20">
-            {userAvatar ? (
-              <img src={userAvatar} alt="" className="w-9 h-9 rounded-full object-cover border border-[#D4AF37]" />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-[#D4AF37] text-[#0A0F1E] flex items-center justify-center font-bold text-sm font-mono">
-                {userName ? userName.charAt(0).toUpperCase() : "U"}
-              </div>
-            )}
-            <div className="flex flex-col hidden sm:flex">
-              <span className="text-sm font-semibold text-white">{userName || userEmail?.split("@")[0] || "User"}</span>
-              <span className="text-xs text-[#D4AF37] tracking-widest uppercase font-mono">{userRole}</span>
+        {/* User Auth Profile */}
+        <div className="flex items-center gap-3">
+          {userAvatar ? (
+            <img src={userAvatar} alt="" className="w-7 h-7 rounded-full object-cover border border-[#C5A059]" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-[#C5A059] text-[#0A0F1E] flex items-center justify-center font-bold text-xs font-mono">
+              {userName ? userName.charAt(0).toUpperCase() : "A"}
             </div>
-            <button 
-              onClick={handleSignOut}
-              className="text-xs text-gray-500 hover:text-red-400 ml-4 transition-colors font-mono uppercase tracking-widest cursor-pointer"
-            >
-              Sign Out
-            </button>
+          )}
+          <div className="flex flex-col hidden sm:flex leading-none">
+            <span className="text-xs font-bold text-white">{userName || userEmail?.split("@")[0] || "User"}</span>
+            <span className="text-[9px] text-[#C5A059] tracking-wider uppercase font-mono mt-0.5">{userRole}</span>
           </div>
+          <button 
+            onClick={handleSignOut}
+            className="text-[10px] text-red-400 hover:text-red-300 font-mono font-bold uppercase tracking-wider bg-red-950/20 border border-red-500/20 px-2.5 py-1 rounded cursor-pointer transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center p-8 relative z-10">
+      {/* Main Workspace */}
+      <div className="flex-1 flex flex-col lg:flex-row relative z-10">
         
-        <div className="text-center mb-16 mt-8">
-          <h2 className="text-3xl md:text-4xl font-semibold tracking-wide mb-3">Universal Ecosystem Launchpad</h2>
-          <p className="text-[#A0AEC0] text-sm md:text-base tracking-wider uppercase font-light">High-fidelity web UI for a luxury enterprise system</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 md:gap-8 max-w-[1500px] w-full px-4">
-          {apps.map((app, index) => (
-            <a 
-              key={app.id}
-              href={app.url}
-              className="group relative flex flex-col items-center text-center p-8 rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-2 h-[460px] cursor-pointer"
-            >
-              {/* Glass Background */}
-              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.08] to-transparent backdrop-blur-xl border border-white/[0.15] rounded-[2rem] group-hover:border-[#D4AF37]/50 group-hover:shadow-[0_0_40px_rgba(212,175,55,0.15)] transition-all duration-500" />
+        {/* Left Panel - Administrative Controls */}
+        <aside className="w-full lg:w-80 bg-[#090F1D]/80 border-r border-[#C5A059]/20 p-6 flex flex-col justify-between shrink-0 backdrop-blur-xl z-20">
+          <div className="space-y-6">
+            
+            {/* Sidebar Navigation Options */}
+            <div className="space-y-2">
+              <span className="text-[10px] text-gray-500 uppercase tracking-widest block font-bold mb-3">Ecosystem Console</span>
               
-              {/* Inner content */}
-              <div className="relative z-10 flex flex-col items-center h-full justify-between pt-4 pb-2">
-                <div className="transform group-hover:scale-110 transition-transform duration-500">
-                  {app.icon}
-                </div>
-                
-                <div>
-                  <h3 className={`text-lg font-bold tracking-widest uppercase mb-1 ${index === 0 ? 'text-[#D4AF37]' : 'text-[#E2E8F0]'}`}>
-                    {app.name}
-                  </h3>
-                  <h4 className="text-white text-base mb-4 font-medium">{app.tagline}</h4>
-                  <p className="text-[#A0AEC0] text-xs leading-relaxed max-w-[200px] mx-auto opacity-80 mb-6">
-                    {app.desc}
-                  </p>
-                  
-                  {app.adminUrl && (userRole === 'super_admin' || userRole === 'admin') && (
-                    <div className="absolute bottom-6 left-0 right-0 flex justify-center z-20" onClick={(e) => e.stopPropagation()}>
-                      <a href={app.adminUrl} className="px-5 py-2.5 bg-gradient-to-r from-[#996515] to-[#C5A059] text-[#0A1021] font-bold text-[10px] uppercase tracking-wider rounded-xl shadow-[0_0_15px_rgba(197,160,89,0.4)] hover:brightness-110 hover:scale-105 transition-all">
-                        Admin Panel
-                      </a>
-                    </div>
-                  )}
-                </div>
+              <button 
+                onClick={() => setActiveSection("overview")}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeSection === "overview" 
+                    ? "border-[#C5A059] bg-[#C5A059]/10 text-white shadow-[0_0_15px_rgba(197,160,89,0.1)]" 
+                    : "border-transparent text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Overview & Charts
+              </button>
+              
+              <button 
+                onClick={() => setActiveSection("delegations")}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all text-left cursor-pointer ${
+                  activeSection === "delegations" 
+                    ? "border-[#C5A059] bg-[#C5A059]/10 text-white shadow-[0_0_15px_rgba(197,160,89,0.1)]" 
+                    : "border-transparent text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+                Role Delegation
+              </button>
+            </div>
+
+            {/* Admin Delegation Form */}
+            <div className="bg-[#040815]/80 border border-[#C5A059]/30 rounded-2xl p-5 space-y-4 shadow-xl">
+              <div>
+                <h3 className="text-xs font-extrabold uppercase text-[#C5A059] tracking-wider mb-1">Add Project Admin</h3>
+                <p className="text-[10px] text-gray-400 leading-tight">Delegate dashboard management authority directly.</p>
               </div>
 
-              {/* Glowing highlight at top */}
-              <div className={`absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent ${index === 0 ? 'via-[#D4AF37]' : 'via-white/50'} to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-            </a>
-          ))}
-        </div>
-
-        {/* Viral Network Dashboard */}
-        {userUid && (
-          <div className="mt-16 w-full max-w-[1500px] px-4">
-            <div className="bg-[#1A2035]/80 backdrop-blur-md border border-[#D4AF37]/30 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#D4AF37]/5 to-transparent pointer-events-none" />
-              
-              <div className="flex-1 z-10">
-                <h3 className="text-xl md:text-2xl font-bold text-white mb-2 tracking-wide font-serif">
-                  My <span className="text-[#D4AF37]">Viral Network</span>
-                </h3>
-                <p className="text-[#A0AEC0] text-sm md:text-base max-w-lg mb-4">
-                  Share your unique Sovereign Ecosystem link via WhatsApp. Every time a new user signs in using your link, they are permanently attributed to your network.
-                </p>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs uppercase tracking-widest text-[#A0AEC0]">Your Unique ID:</span>
-                  <code className="bg-[#0A0F1E] px-3 py-1.5 rounded-md border border-[#D4AF37]/20 text-[#D4AF37] font-mono text-sm shadow-inner">
-                    {userUid}
-                  </code>
+              <form onSubmit={handleAddAdmin} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">Select Project</label>
+                  <select 
+                    value={selectedProject} 
+                    onChange={(e) => setSelectedProject(e.target.value)}
+                    className="w-full bg-[#0A0F1E] border border-slate-800 rounded-lg text-xs p-2 text-[#C5A059] font-bold focus:outline-none focus:border-[#C5A059]"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.name} value={p.name}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
 
-              <div className="flex flex-col items-center justify-center p-6 bg-[#0A0F1E]/50 border border-[#D4AF37]/20 rounded-2xl min-w-[200px] z-10">
-                <span className="text-5xl font-black text-[#D4AF37] tracking-tighter mb-1">
-                  {referralCount}
-                </span>
-                <span className="text-[10px] uppercase tracking-widest text-[#A0AEC0] font-bold">
-                  Successful Referrals
-                </span>
-              </div>
-              
-              <div className="z-10">
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">Assign Role</label>
+                  <select 
+                    value={selectedRole} 
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="w-full bg-[#0A0F1E] border border-slate-800 rounded-lg text-xs p-2 text-[#C5A059] font-bold focus:outline-none focus:border-[#C5A059]"
+                  >
+                    <option value="admin">Administrator</option>
+                    <option value="moderator">Staff / Moderator</option>
+                    <option value="super_admin">Global Super Admin</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="Enter full name"
+                    value={newAdminName}
+                    onChange={(e) => setNewAdminName(e.target.value)}
+                    className="w-full bg-[#0A0F1E] border border-slate-800 rounded-lg text-xs p-2 text-white placeholder-slate-600 focus:outline-none focus:border-[#C5A059]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] uppercase tracking-wider text-gray-400 block font-bold">Email Address</label>
+                  <input 
+                    type="email" 
+                    placeholder="admin@shyamdash.com"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    className="w-full bg-[#0A0F1E] border border-slate-800 rounded-lg text-xs p-2 text-white placeholder-slate-600 focus:outline-none focus:border-[#C5A059]"
+                  />
+                </div>
+
                 <button 
-                  onClick={() => {
-                    const shareUrl = `https://sd-gold-hub.vercel.app?ref=${userUid}`;
-                    const message = `Join the Shyam Dash Sovereign Ecosystem! Explore Gold, Handlooms, Health, and IT directly: ${shareUrl}`;
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, "_blank");
-                  }}
-                  className="flex items-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white px-6 py-4 rounded-xl font-bold text-sm uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(37,211,102,0.4)] cursor-pointer"
+                  type="submit" 
+                  disabled={delegationLoading}
+                  className="w-full py-2.5 bg-gradient-to-r from-[#996515] to-[#C5A059] text-[#0A1021] font-black text-[10px] uppercase tracking-wider rounded-xl shadow hover:brightness-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
                 >
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.245 3.481 5.231 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.859c1.619.96 3.46 1.468 5.352 1.468 5.435-.002 9.851-4.418 9.853-9.853.001-2.635-1.023-5.114-2.885-6.976-1.862-1.863-4.341-2.888-6.977-2.887-5.435.002-9.851 4.418-9.853 9.853-.001 1.932.508 3.81 1.472 5.441l-1.002 3.659 3.754-.985zm9.588-6.353c-.524-.262-3.098-1.53-3.578-1.705-.48-.175-.83-.262-1.18.262-.35.524-1.355 1.705-1.66 2.055-.306.35-.612.394-1.136.131-.524-.262-2.213-.816-4.215-2.603-1.558-1.39-2.609-3.109-2.915-3.633-.306-.524-.033-.808.23-.107.235.262.524.524.787.787.262.262.35.524.525.875.175.35.087.656-.044.919-.131.262-1.18 2.844-1.617 3.894-.426.102-.853.088-1.18-.175-.382-.306-.382-.787-.382-.787v-.001c0-1.662 1.348-3.01 3.01-3.01h.001c1.237 0 2.308.75 2.771 1.832.22-.163.454-.316.702-.456.623-.35 1.312-.533 2.02-.533 2.321 0 4.209 1.888 4.209 4.209 0 .445-.07.88-.204 1.295-.401 1.248-1.576 2.148-2.956 2.148-.225 0-.447-.024-.664-.071z"/>
-                  </svg>
-                  Share to WhatsApp
+                  {delegationLoading ? (
+                    <div className="w-3.5 h-3.5 border-2 border-slate-950/20 border-t-slate-950 rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                      <span>Grant Admin Access</span>
+                    </>
+                  )}
                 </button>
+              </form>
+            </div>
+
+          </div>
+
+          {/* Infrastructure Health Status */}
+          <div className="pt-6 border-t border-[#C5A059]/20 hidden lg:block">
+            <span className="text-[9px] text-gray-500 uppercase tracking-widest font-bold block mb-2">Ecosystem Health</span>
+            <div className="space-y-1.5 text-[10px]">
+              <div className="flex items-center justify-between text-gray-300">
+                <span>SSO Identity Hub</span>
+                <span className="text-green-500 font-bold flex items-center gap-1">🟢 99.98%</span>
+              </div>
+              <div className="flex items-center justify-between text-gray-300">
+                <span>IT SaaS Host Nodes</span>
+                <span className="text-green-500 font-bold flex items-center gap-1">🟢 Online</span>
               </div>
             </div>
           </div>
-        )}
-      </main>
+        </aside>
+
+        {/* Main Body - Analytics Dashboard & Feeds */}
+        <main className="flex-1 p-6 md:p-8 space-y-8 overflow-y-auto max-h-[calc(100vh-56px)]">
+          
+          {/* Header Title Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="text-2xl font-black text-white font-serif tracking-wide">
+                Ecosystem <span className="text-gold-gradient">Command Center</span>
+              </h2>
+              <p className="text-xs text-gray-400">Consolidated analytics and remote administration across all 6 projects.</p>
+            </div>
+
+            {/* Quick Stats Summary */}
+            <div className="flex flex-wrap gap-3">
+              <span className="text-[10px] uppercase font-bold tracking-wider px-3.5 py-1.5 rounded-full bg-[#C5A059]/10 border border-[#C5A059]/30 text-[#C5A059]">
+                Live Gold Rate: ₹7,138.50
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Launcher Shortcuts */}
+          <section className="space-y-3">
+            <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold block">Quick Launch Gateways</span>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {projects.map((p) => (
+                <a 
+                  key={p.name}
+                  href={getProjectUrl(p.url, p.adminPath)}
+                  className="bg-[#090F1D]/80 border border-[#C5A059]/20 hover:border-[#C5A059] p-3.5 rounded-2xl text-center group transition-all hover:-translate-y-0.5 shadow-lg flex flex-col items-center justify-center gap-1.5"
+                >
+                  <span className="text-2xl group-hover:scale-110 transition-transform">{p.icon}</span>
+                  <div className="leading-tight">
+                    <span className="text-[10px] font-bold text-white block group-hover:text-[#C5A059] transition-colors">{p.name}</span>
+                    <span className="text-[8px] text-[#C5A059] uppercase tracking-widest font-mono font-bold block mt-0.5">Admin →</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          {/* Aggregated Ecosystem Metrics */}
+          <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            {/* Stat 1 */}
+            <div className="bg-[#090F1D]/60 border border-slate-800 hover:border-[#C5A059]/40 p-5 rounded-2xl flex items-center gap-4 transition-all shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/20 flex items-center justify-center text-xl shrink-0">
+                💼
+              </div>
+              <div>
+                <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold block">Ecosystem Gross Sales</span>
+                <strong className="text-lg md:text-xl font-bold text-[#C5A059] block mt-0.5">₹18,42,900</strong>
+              </div>
+            </div>
+
+            {/* Stat 2 */}
+            <div className="bg-[#090F1D]/60 border border-slate-800 hover:border-[#C5A059]/40 p-5 rounded-2xl flex items-center gap-4 transition-all shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/20 flex items-center justify-center text-xl shrink-0">
+                👥
+              </div>
+              <div>
+                <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold block">Ecosystem SSO Users</span>
+                <strong className="text-lg md:text-xl font-bold text-white block mt-0.5">14,281</strong>
+              </div>
+            </div>
+
+            {/* Stat 3 */}
+            <div className="bg-[#090F1D]/60 border border-slate-800 hover:border-[#C5A059]/40 p-5 rounded-2xl flex items-center gap-4 transition-all shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/20 flex items-center justify-center text-xl shrink-0">
+                🧵
+              </div>
+              <div>
+                <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold block">Active Weavers & Stores</span>
+                <strong className="text-lg md:text-xl font-bold text-white block mt-0.5">1,894</strong>
+              </div>
+            </div>
+
+            {/* Stat 4 */}
+            <div className="bg-[#090F1D]/60 border border-slate-800 hover:border-[#C5A059]/40 p-5 rounded-2xl flex items-center gap-4 transition-all shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-[#C5A059]/10 border border-[#C5A059]/20 flex items-center justify-center text-xl shrink-0">
+                📶
+              </div>
+              <div>
+                <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold block">SSO Node Response</span>
+                <strong className="text-lg md:text-xl font-bold text-green-500 block mt-0.5">99.98%</strong>
+              </div>
+            </div>
+
+          </section>
+
+          {/* Interactive Graph Section */}
+          <section className="bg-[#090F1D]/90 border border-slate-800 rounded-3xl p-6 shadow-2xl relative">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="text-sm font-extrabold uppercase tracking-wider text-white">Ecosystem Performance Graph</h3>
+                <p className="text-[10px] text-gray-400">Multi-hub trends for transactions and account creations.</p>
+              </div>
+
+              {/* Chart Tabs */}
+              <div className="flex border border-slate-800 rounded-xl overflow-hidden p-0.5 bg-[#040815]">
+                <button 
+                  onClick={() => setActiveChartTab("sales")}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all cursor-pointer ${
+                    activeChartTab === "sales" 
+                      ? "bg-gradient-to-r from-[#996515] to-[#C5A059] text-slate-900" 
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Sales Revenue
+                </button>
+                <button 
+                  onClick={() => setActiveChartTab("users")}
+                  className={`px-3 py-1 text-[10px] font-bold rounded-lg uppercase tracking-wider transition-all cursor-pointer ${
+                    activeChartTab === "users" 
+                      ? "bg-gradient-to-r from-[#996515] to-[#C5A059] text-slate-900" 
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  SSO Sign-ups
+                </button>
+              </div>
+            </div>
+
+            {/* Glowing Neon Chart rendering */}
+            <div className="w-full h-64 relative bg-[#040815]/50 border border-slate-900 rounded-2xl p-4 overflow-hidden flex items-end justify-between">
+              
+              {/* Tooltip Overlay */}
+              {hoveredPoint && (
+                <div 
+                  className="absolute bg-[#090F1D] border border-[#C5A059]/60 rounded-xl p-2.5 shadow-2xl z-30 pointer-events-none text-left"
+                  style={{ left: hoveredPoint.x - 60, bottom: hoveredPoint.y + 15 }}
+                >
+                  <span className="text-[8px] text-gray-500 uppercase tracking-widest font-mono block">{hoveredPoint.label}</span>
+                  <span className="text-xs font-black text-[#C5A059] block mt-0.5">{hoveredPoint.val}</span>
+                </div>
+              )}
+
+              {/* SVG Charts drawing */}
+              <svg className="absolute inset-0 w-full h-full p-6" viewBox="0 0 500 200" preserveAspectRatio="none">
+                {activeChartTab === "sales" ? (
+                  <>
+                    {/* Gold Hub Sales Line (Gold) */}
+                    <path 
+                      d="M 50,160 L 150,140 L 250,110 L 350,80 L 450,30" 
+                      fill="none" 
+                      stroke="#C5A059" 
+                      strokeWidth="3.5" 
+                      strokeLinecap="round"
+                      filter="drop-shadow(0 0 6px rgba(197,160,89,0.5))"
+                    />
+                    {/* Sambalpuri Hub Sales Line (Cyan/Teal) */}
+                    <path 
+                      d="M 50,175 L 150,155 L 250,140 L 350,115 L 450,85" 
+                      fill="none" 
+                      stroke="#06B6D4" 
+                      strokeWidth="3.5" 
+                      strokeLinecap="round"
+                      filter="drop-shadow(0 0 6px rgba(6,182,212,0.5))"
+                    />
+                    
+                    {/* Interaction Circles */}
+                    <circle cx="50" cy="160" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 50, y: 40, label: "Jan (Gold Hub)", val: "₹1,20,000" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="150" cy="140" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 150, y: 60, label: "Feb (Gold Hub)", val: "₹1,50,000" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="250" cy="110" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 250, y: 90, label: "Mar (Gold Hub)", val: "₹1,90,000" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="350" cy="80" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 350, y: 120, label: "Apr (Gold Hub)", val: "₹2,40,000" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="450" cy="30" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 430, y: 170, label: "May (Gold Hub)", val: "₹3,10,000" })} onMouseLeave={() => setHoveredPoint(null)} />
+
+                    <circle cx="450" cy="85" r="5" fill="#06B6D4" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 430, y: 115, label: "May (Sambalpuri)", val: "₹2,20,000" })} onMouseLeave={() => setHoveredPoint(null)} />
+                  </>
+                ) : (
+                  <>
+                    {/* SSO Users Signups (Gold) */}
+                    <path 
+                      d="M 50,180 L 150,165 L 250,140 L 350,105 L 450,55" 
+                      fill="none" 
+                      stroke="#C5A059" 
+                      strokeWidth="3.5" 
+                      strokeLinecap="round"
+                      filter="drop-shadow(0 0 6px rgba(197,160,89,0.5))"
+                    />
+                    
+                    <circle cx="50" cy="180" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 50, y: 20, label: "Jan (Active Users)", val: "2,100" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="150" cy="165" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 150, y: 35, label: "Feb (Active Users)", val: "3,500" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="250" cy="140" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 250, y: 60, label: "Mar (Active Users)", val: "5,800" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="350" cy="105" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 350, y: 95, label: "Apr (Active Users)", val: "9,200" })} onMouseLeave={() => setHoveredPoint(null)} />
+                    <circle cx="450" cy="55" r="5" fill="#C5A059" className="cursor-pointer" onMouseEnter={() => setHoveredPoint({ x: 430, y: 145, label: "May (Active Users)", val: "14,281" })} onMouseLeave={() => setHoveredPoint(null)} />
+                  </>
+                )}
+              </svg>
+
+              {/* Monthly X-Axis Labels */}
+              <div className="w-full flex justify-between px-6 text-[9px] text-gray-500 font-mono font-bold z-10 select-none pointer-events-none">
+                <span>JAN</span>
+                <span>FEB</span>
+                <span>MAR</span>
+                <span>APR</span>
+                <span>MAY</span>
+              </div>
+            </div>
+
+            {/* Graph Legend */}
+            {activeChartTab === "sales" && (
+              <div className="flex gap-4 justify-center mt-3 text-[10px] font-mono">
+                <span className="flex items-center gap-1.5 text-gray-400">
+                  <span className="w-2.5 h-1.5 rounded-full bg-[#C5A059]" /> Gold Hub Sales
+                </span>
+                <span className="flex items-center gap-1.5 text-gray-400">
+                  <span className="w-2.5 h-1.5 rounded-full bg-[#06B6D4]" /> Sambalpuri Hub Sales
+                </span>
+              </div>
+            )}
+          </section>
+
+          {/* Split Ledgers / Activity Log */}
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Sales Log Column */}
+            <div className="bg-[#090F1D]/80 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+              <div>
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#C5A059]">Consolidated Sales Ledger</h3>
+                <p className="text-[10px] text-gray-400">Recent transactions occurring across payment escrows.</p>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {[
+                  { hub: "Gold Hub", item: "Diamond Bridal Necklace", value: "₹2,45,000", time: "10 mins ago", color: "text-[#C5A059]", icon: "💍" },
+                  { hub: "Sambalpuri Hub", item: "Mulberry Silk Double Ikat Pata Saree", value: "₹14,899", time: "28 mins ago", color: "text-green-400", icon: "🧵" },
+                  { hub: "IT Service", item: "Enterprise Hosting Plan - Renewal", value: "₹4,999", time: "1 hr ago", color: "text-cyan-400", icon: "💻" },
+                  { hub: "Gold Hub", item: "22K Solid Gold Bangles (22gm)", value: "₹1,56,400", time: "2 hrs ago", color: "text-[#C5A059]", icon: "💍" },
+                  { hub: "Sambalpuri Hub", item: "Traditional Handspun Cotton Saree", value: "₹4,899", time: "4 hrs ago", color: "text-green-400", icon: "🧵" }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 bg-[#040815]/60 border border-slate-900 rounded-xl hover:border-slate-800 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{item.icon}</span>
+                      <div className="leading-tight">
+                        <span className="text-xs font-bold text-white block truncate max-w-[180px]">{item.item}</span>
+                        <span className={`text-[8px] font-mono uppercase tracking-wider font-extrabold ${item.color}`}>{item.hub}</span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-[#C5A059] block">{item.value}</span>
+                      <span className="text-[8px] text-gray-500 font-mono block mt-0.5">{item.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Global Activity Feed Column */}
+            <div className="bg-[#090F1D]/80 border border-slate-800 rounded-3xl p-5 shadow-lg space-y-4">
+              <div>
+                <h3 className="text-xs font-extrabold uppercase tracking-wider text-white">Ecosystem Activity Log</h3>
+                <p className="text-[10px] text-gray-400">Live remote operations logged via Auth SSO authentication.</p>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                {[
+                  { tag: "AUTH", detail: "Admin Shyam Dash delegated 'admin' role to weaver@bhulia.com.", time: "12m ago", style: "bg-[#C5A059]/20 text-[#C5A059] border-[#C5A059]/30" },
+                  { tag: "SSO", detail: "Super Admin (odishamedical@gmail.com) initiated remote jump to DehaPa portal.", time: "45m ago", style: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+                  { tag: "INDEX", detail: "Artisan Boutique (Bargarh Handlooms) claimed directory listing.", time: "2h ago", style: "bg-green-500/10 text-green-400 border-green-500/20" },
+                  { tag: "DEPLOY", detail: "IT node 'sd-gold-hub-vercel' trigger build successfully.", time: "4h ago", style: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+                  { tag: "ALERT", detail: "Unusual role check bypassed: local auth disabled on Directory Hub.", time: "5h ago", style: "bg-red-500/10 text-red-400 border-red-500/20" }
+                ].map((log, idx) => (
+                  <div key={idx} className="flex justify-between items-start gap-4 p-3 bg-[#040815]/60 border border-slate-900 rounded-xl text-left text-[11px] leading-relaxed">
+                    <div className="flex items-start gap-2.5">
+                      <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0 mt-0.5 ${log.style}`}>
+                        {log.tag}
+                      </span>
+                      <span className="text-gray-300">{log.detail}</span>
+                    </div>
+                    <span className="text-[8px] text-gray-500 font-mono shrink-0 mt-0.5">{log.time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </section>
+
+        </main>
+      </div>
+
     </div>
   );
 }
