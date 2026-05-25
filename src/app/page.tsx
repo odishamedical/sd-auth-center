@@ -88,6 +88,7 @@ export default function Login() {
     localStorage.setItem("sd_current_user_avatar", avatar);
     localStorage.setItem("sd_current_user_role", role);
     localStorage.setItem("sd_current_user_uid", uid);
+    localStorage.setItem("sd_current_user_profile_complete", "true");
 
     if (role === "super_admin" || role === "admin" || role === "staff") {
       router.push('/launcher');
@@ -98,6 +99,7 @@ export default function Login() {
       redirectUrl.searchParams.set("sso_name", name);
       redirectUrl.searchParams.set("sso_avatar", avatar);
       redirectUrl.searchParams.set("sso_role", role);
+      redirectUrl.searchParams.set("sso_profile_complete", "true");
       redirectUrl.searchParams.set("token", token);
       
       localStorage.removeItem("sd_pending_redirect");
@@ -236,12 +238,13 @@ export default function Login() {
       localStorage.setItem("sd_current_user_email", email);
       localStorage.setItem("sd_current_user_name", email.split("@")[0]);
       localStorage.setItem("sd_current_user_role", role);
+      localStorage.setItem("sd_current_user_profile_complete", "true");
       
       const pendingRedirect = localStorage.getItem("sd_pending_redirect");
       if (role === "super_admin" || role === "admin" || role === "staff") {
         router.push('/launcher');
       } else if (pendingRedirect) {
-        window.location.href = `${pendingRedirect}?token=sd_user_sso_token&sso_email=${email}&sso_role=${role}`;
+        window.location.href = `${pendingRedirect}?token=sd_user_sso_token&sso_email=${email}&sso_role=${role}&sso_profile_complete=true`;
       } else {
         router.push('/profile');
       }

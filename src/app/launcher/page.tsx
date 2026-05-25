@@ -33,6 +33,10 @@ export default function Launcher() {
       router.push("/profile");
       return;
     }
+    if (localRole === "franchise" || localRole === "digital_franchise" || localRole === "physical_franchise") {
+      router.push("/franchise");
+      return;
+    }
 
     setUserEmail(localStorage.getItem("sd_current_user_email"));
     setUserName(localStorage.getItem("sd_current_user_name"));
@@ -69,9 +73,14 @@ export default function Launcher() {
         localStorage.setItem("sd_current_user_avatar", finalAvatar);
         localStorage.setItem("sd_current_user_role", role);
         localStorage.setItem("sd_current_user_uid", user.uid);
+        localStorage.setItem("sd_current_user_profile_complete", "true");
 
         if (role === "user") {
           router.push("/profile");
+          return;
+        }
+        if (role === "franchise" || role === "digital_franchise" || role === "physical_franchise") {
+          router.push("/franchise");
           return;
         }
 
