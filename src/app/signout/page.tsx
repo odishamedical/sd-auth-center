@@ -34,12 +34,16 @@ export default function SignOutPage() {
       sessionStorage.clear();
 
       // 3. Redirect back to the originating app (or auth-center home)
+      // Append ?sd_signout=1 so the destination project clears ITS OWN localStorage
+      // (localStorage is domain-scoped — we cannot clear other domains' storage from here)
       const params = new URLSearchParams(window.location.search);
       const redirectBack = params.get("redirect") || "/";
+      const separator = redirectBack.includes("?") ? "&" : "?";
+      const redirectWithSignout = `${redirectBack}${separator}sd_signout=1`;
 
       // Small delay so Firebase session is fully flushed
       setTimeout(() => {
-        window.location.href = redirectBack;
+        window.location.href = redirectWithSignout;
       }, 300);
     };
 
