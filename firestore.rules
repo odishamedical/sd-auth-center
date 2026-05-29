@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── SIGNOUT BROADCAST ──────────────────────────────────────────────────────
+    // Non-sensitive: only stores email + timestamp of a signout event.
+    // All SD projects listen to this collection via onSnapshot to detect
+    // when a user signs out from any domain and clear their own localStorage.
+    match /signout_broadcast/{docId} {
+      allow read: if true;                     // Any project can listen
+      allow write: if request.auth != null;    // Only authenticated users can write
+    }
+
+    // ── ALL OTHER COLLECTIONS ─────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
