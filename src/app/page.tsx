@@ -61,9 +61,12 @@ export default function Login() {
       if (ref) {
         localStorage.setItem("sd_pending_referral", ref);
       }
+      // Always update sd_pending_redirect from URL if present (overwrite stale values)
       if (redirectUri) {
         localStorage.setItem("sd_pending_redirect", redirectUri);
       }
+      // If no redirect_uri in URL but we have a stale value, keep it
+      // (user may have navigated back after being sent to /profile)
     }
   }, []);
 
@@ -105,6 +108,7 @@ export default function Login() {
       localStorage.removeItem("sd_pending_redirect");
       window.location.href = redirectUrl.toString();
     } else {
+      // No redirect_uri — go to profile page
       router.push('/profile');
     }
   };
@@ -144,6 +148,8 @@ export default function Login() {
 
         // Intercept standard users with incomplete profiles
         if (dbRole !== "super_admin" && dbRole !== "admin" && dbRole !== "staff" && !isProfileComplete) {
+          // Save pending redirect before showing profile modal
+          // (it's already in localStorage from the useEffect above)
           setTempUser(user);
           setFullName(finalName);
           const firstInterest = getInterestFromRedirect();

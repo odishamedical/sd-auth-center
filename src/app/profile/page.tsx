@@ -31,10 +31,9 @@ export default function UserProfile() {
     }
   }, [router]);
 
-  const handleSignOut = async () => {
-    await signOut(auth);
-    localStorage.clear();
-    router.push("/");
+  const handleSignOut = () => {
+    const authBase = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://sd-auth-center.vercel.app";
+    window.location.href = `${authBase}/signout?redirect=${encodeURIComponent(authBase + "/")}`;
   };
 
   const getSsoParams = () => {

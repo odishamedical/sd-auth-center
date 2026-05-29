@@ -58,6 +58,20 @@ export default function Launcher() {
           if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
             role = "super_admin";
           }
+          
+          // Also check the new admin_roles collection for Project Admins (like npfcodisha)
+          try {
+            if (user.email) {
+              const adminRoleRef = doc(db, "admin_roles", user.email);
+              const adminRoleSnap = await getDoc(adminRoleRef);
+              if (adminRoleSnap.exists()) {
+                const adminData = adminRoleSnap.data();
+                if (adminData.role) role = adminData.role;
+              }
+            }
+          } catch (e) {
+            console.error("Failed to check admin_roles", e);
+          }
         } catch (err) {
           console.warn("Launcher role fetch error, using fallback", err);
           if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
@@ -106,17 +120,13 @@ export default function Launcher() {
     return () => unsubscribe();
   }, [router]);
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
     if (confirm("Are you sure you want to sign out from your Sovereign Gmail session?")) {
-      try { await signOut(auth); } catch (e) { console.error(e); }
-      localStorage.removeItem("sd_current_user_email");
-      localStorage.removeItem("sd_current_user_name");
-      localStorage.removeItem("sd_current_user_avatar");
-      localStorage.removeItem("sd_current_user_role");
-      localStorage.removeItem("sd_current_user_uid");
-      router.push('/');
+      const authBase = window.location.hostname === "localhost" ? "http://localhost:3000" : "https://sd-auth-center.vercel.app";
+      window.location.href = `${authBase}/signout?redirect=${encodeURIComponent(authBase + "/")}`;
     }
   };
+
 
   const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,8 +173,9 @@ export default function Launcher() {
   };
 
   const projects = [
+    { name: "Master Marketing Panel", url: "https://sd-auth-center.vercel.app", adminPath: "/admin", icon: "🏢", desc: "Universal Governance Hub" },
     { name: "Gold Hub", url: "https://sd-gold-hub.vercel.app", adminPath: "/admin", icon: "💛", desc: "Gold Jewelry Marketplace & Vault Controls" },
-    { name: "Sambalpuri Hub", url: "https://sd-bhulia-hub.vercel.app", adminPath: "/franchise/dashboard", icon: "🧵", desc: "Heritage Textiles, Weavers, & Escrow Ledger" },
+    { name: "Sambalpuri Hub", url: "https://sd-bhulia-hub.vercel.app", adminPath: "/admin", icon: "🧵", desc: "Heritage Textiles, Weavers, & Escrow Ledger" },
     { name: "Telemedicine", url: "https://sd-dehapa-hub.vercel.app", adminPath: "/portal", icon: "🏥", desc: "Patient Portal & Diagnostic Pipelines" },
     { name: "News", url: "https://sd-news-hub.vercel.app", adminPath: "/admin", icon: "📰", desc: "Localized Media & Reporter Credentials" },
     { name: "Directory", url: "https://sd-directory.vercel.app", adminPath: "/admin", icon: "🧭", desc: "Artisan Listings Index & Store Claims" },
