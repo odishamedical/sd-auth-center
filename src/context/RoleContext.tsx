@@ -51,7 +51,7 @@ export function RoleProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           // AUTO-SEED: Seed initial roles if they don't exist in the database yet
-          if (user.email === "shyamdashcreation@gmail.com" || user.email === "admin@shyamdash.com" || user.email === "odishamedical@gmail.com") {
+          if (user.email === "shyamdashcreation@gmail.com" || user.email === "admin@shyamdash.com") {
             const superAdminData: RoleData = {
               role: 'super_admin',
               assignedHubs: ['all']
