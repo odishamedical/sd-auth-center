@@ -96,17 +96,10 @@ export default function Login() {
     if (role === "super_admin" || role === "admin" || role === "staff") {
       router.push('/launcher');
     } else if (pendingRedirect) {
-      const token = "sd_user_sso_token";
-      const redirectUrl = new URL(pendingRedirect);
-      redirectUrl.searchParams.set("sso_email", email);
-      redirectUrl.searchParams.set("sso_name", name);
-      redirectUrl.searchParams.set("sso_avatar", avatar);
-      redirectUrl.searchParams.set("sso_role", role);
-      redirectUrl.searchParams.set("sso_profile_complete", "true");
-      redirectUrl.searchParams.set("token", token);
-      
+      // SECURE MODE: We no longer pass authentication tokens in the URL.
+      // We just bounce the user back to the app they came from. They will authenticate securely there.
       localStorage.removeItem("sd_pending_redirect");
-      window.location.href = redirectUrl.toString();
+      window.location.href = pendingRedirect;
     } else {
       // No redirect_uri — go to profile page
       router.push('/profile');
@@ -124,9 +117,6 @@ export default function Login() {
       const finalAvatar = user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80";
 
       let userRole = "user";
-      if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
-        userRole = "super_admin";
-      }
 
       // Check profile in Firestore first
       try {
@@ -240,7 +230,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setErrorMsg(null);
     setTimeout(() => {
-      const role: string = email.includes("admin") ? "super_admin" : "user";
+      const role = "user";
       localStorage.setItem("sd_current_user_email", email);
       localStorage.setItem("sd_current_user_name", email.split("@")[0]);
       localStorage.setItem("sd_current_user_role", role);
@@ -250,7 +240,7 @@ export default function Login() {
       if (role === "super_admin" || role === "admin" || role === "staff") {
         router.push('/launcher');
       } else if (pendingRedirect) {
-        window.location.href = `${pendingRedirect}?token=sd_user_sso_token&sso_email=${email}&sso_role=${role}&sso_profile_complete=true`;
+        window.location.href = pendingRedirect;
       } else {
         router.push('/profile');
       }

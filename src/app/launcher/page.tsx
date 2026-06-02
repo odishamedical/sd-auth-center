@@ -55,10 +55,6 @@ export default function Launcher() {
             if (data.role) role = data.role;
           }
           
-          if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
-            role = "super_admin";
-          }
-          
           // Also check the new admin_roles collection for Project Admins (like npfcodisha)
           try {
             if (user.email) {
@@ -74,9 +70,6 @@ export default function Launcher() {
           }
         } catch (err) {
           console.warn("Launcher role fetch error, using fallback", err);
-          if (user.email?.includes("shyamdash") || user.email?.includes("odishamedical") || user.email?.includes("admin")) {
-            role = "super_admin";
-          }
         }
 
         const finalName = user.displayName || user.email?.split("@")[0] || "User";
