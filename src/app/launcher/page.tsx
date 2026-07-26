@@ -172,7 +172,7 @@ export default function Launcher() {
     { name: "Telemedicine", url: "https://sd-dehapa-hub.vercel.app", adminPath: "/portal", icon: "🏥", desc: "Patient Portal & Diagnostic Pipelines" },
     { name: "News", url: "https://sd-news-hub.vercel.app", adminPath: "/admin", icon: "📰", desc: "Localized Media & Reporter Credentials" },
     { name: "Directory", url: "https://sd-directory.vercel.app", adminPath: "/admin", icon: "🧭", desc: "Artisan Listings Index & Store Claims" },
-    { name: "IT Service", url: "https://sd-it-hub-w3sk.vercel.app", adminPath: "/admin", icon: "💻", desc: "Ecosystem SaaS Nodes & Hosting Uptime" }
+    { name: "ShyamDash IT Services", url: "https://sd-it-hub-w3sk.vercel.app", adminPath: "/admin", icon: "💻", desc: "Ecosystem SaaS Nodes & Hosting Uptime" }
   ];
 
   return (
@@ -587,7 +587,7 @@ export default function Launcher() {
                 {[
                   { hub: "Gold Hub", item: "Diamond Bridal Necklace", value: "₹2,45,000", time: "10 mins ago", color: "text-[#C5A059]", icon: "💍" },
                   { hub: "Sambalpuri Hub", item: "Mulberry Silk Double Ikat Pata Saree", value: "₹14,899", time: "28 mins ago", color: "text-green-400", icon: "🧵" },
-                  { hub: "IT Service", item: "Enterprise Hosting Plan - Renewal", value: "₹4,999", time: "1 hr ago", color: "text-cyan-400", icon: "💻" },
+                  { hub: "ShyamDash", item: "Enterprise Hosting Plan - Renewal", value: "₹4,999", time: "1 hr ago", color: "text-cyan-400", icon: "💻" },
                   { hub: "Gold Hub", item: "22K Solid Gold Bangles (22gm)", value: "₹1,56,400", time: "2 hrs ago", color: "text-[#C5A059]", icon: "💍" },
                   { hub: "Sambalpuri Hub", item: "Traditional Handspun Cotton Saree", value: "₹4,899", time: "4 hrs ago", color: "text-green-400", icon: "🧵" }
                 ].map((item, idx) => (
