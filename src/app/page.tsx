@@ -90,6 +90,13 @@ export default function Login() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ uid })
         });
+
+        // Debug raw response
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server returned HTTP ${response.status}. Details: ${errorText.substring(0, 100)}...`);
+        }
+
         const data = await response.json();
         
         if (data.token) {
