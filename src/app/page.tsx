@@ -6,18 +6,6 @@ import React, { useState, useEffect } from 'react';
 import { auth, db, googleProvider, signInWithPopup } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
-const ODISHA_DISTRICTS = [
-  "Angul", "Balasore", "Bargarh", "Bhadrak", "Bolangir", "Boudh", 
-  "Cuttack", "Deogarh", "Dhenkanal", "Gajapati", "Ganjam", "Jagatsinghpur", 
-  "Jajpur", "Jharsuguda", "Kalahandi", "Kandhamal", "Kendrapara", "Keonjhar", 
-  "Khordha", "Koraput", "Malkangiri", "Mayurbhanj", "Nabarangpur", "Nayagarh", 
-  "Nuapada", "Puri", "Rayagada", "Sambalpur", "Sonepur", "Sundargarh"
-];
-
-const COUNTRIES = [
-  "United States", "United Kingdom", "United Arab Emirates", "Canada", 
-  "Australia", "Singapore", "Saudi Arabia", "Germany", "France", "Japan"
-];
 
 const INTERESTS = [
   "Gold Jewellery",
@@ -42,12 +30,10 @@ export default function Login() {
 
   // Form Fields
   const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [whatsappSameAsPhone, setWhatsappSameAsPhone] = useState(true);
   const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [regionScope, setRegionScope] = useState('India');
-  const [state, setState] = useState('Odisha');
-  const [district, setDistrict] = useState('Cuttack');
-  const [country, setCountry] = useState('United States');
-  const [fullAddress, setFullAddress] = useState('');
+  const [location, setLocation] = useState('');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [whatsappConsent, setWhatsappConsent] = useState(true);
 
@@ -186,7 +172,7 @@ export default function Login() {
   const handleSubmitProfile = async () => {
     if (!tempUser) return;
     
-    if (!whatsappNumber.trim()) {
+    if (!whatsappSameAsPhone && !whatsappNumber.trim()) {
       alert("WhatsApp number is required!");
       return;
     }
@@ -197,13 +183,10 @@ export default function Login() {
       const pendingReferral = localStorage.getItem("sd_pending_referral") || null;
       
       const profileDetails = {
-        whatsappNumber: whatsappNumber,
+        phoneNumber: phoneNumber,
+        whatsappNumber: whatsappSameAsPhone ? phoneNumber : whatsappNumber,
         isWhatsAppVerified: false,
-        addressType: regionScope,
-        state: regionScope === "India" ? state : "",
-        district: regionScope === "India" ? district : "",
-        country: regionScope === "India" ? "India" : country,
-        fullAddress: fullAddress,
+        location: location,
         interests: selectedInterests,
         whatsappConsent: whatsappConsent
       };
@@ -403,13 +386,13 @@ export default function Login() {
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">WhatsApp Number (Mandatory)</label>
+                  <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">Phone Number (Mandatory)</label>
                   <div className="flex gap-2">
                     <span className="bg-black/50 border border-[#D4AF37]/20 px-3 py-2.5 rounded-lg text-sm text-[#A0AEC0]">+91</span>
                     <input 
                       type="tel" 
-                      value={whatsappNumber}
-                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
                       placeholder="9876543210"
                       required
                       className="w-full bg-black/40 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors"
@@ -417,105 +400,56 @@ export default function Login() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">Region Scope</label>
-                    <select
-                      value={regionScope}
-                      onChange={(e) => {
-                        setRegionScope(e.target.value);
-                        if (e.target.value === "International") {
-                          setCountry("United States");
-                        } else {
-                          setState("Odisha");
-                          setDistrict("Cuttack");
-                        }
-                      }}
-                      className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors"
-                    >
-                      <option value="India">India</option>
-                      <option value="International">International</option>
-                    </select>
-                  </div>
-
-                  {regionScope === "India" ? (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">State</label>
-                      <select
-                        value={state}
-                        onChange={(e) => {
-                          setState(e.target.value);
-                          if (e.target.value === "Odisha") {
-                            setDistrict("Cuttack");
-                          } else {
-                            setDistrict("");
-                          }
-                        }}
-                        className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors"
-                      >
-                        <option value="Odisha">Odisha</option>
-                        <option value="Other State">Other State</option>
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">Country</label>
-                      <select
-                        value={country}
-                        onChange={(e) => setCountry(e.target.value)}
-                        className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors"
-                      >
-                        {COUNTRIES.map((c, idx) => (
-                          <option key={idx} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                <div className="flex items-center gap-3 mt-1">
+                  <input 
+                    type="checkbox" 
+                    id="sameAsPhone"
+                    checked={whatsappSameAsPhone}
+                    onChange={(e) => setWhatsappSameAsPhone(e.target.checked)}
+                    className="w-4 h-4 rounded border-[#D4AF37]/40 bg-black/40 text-[#D4AF37] focus:ring-[#D4AF37] focus:ring-offset-gray-900"
+                  />
+                  <label htmlFor="sameAsPhone" className="text-xs text-[#A0AEC0] cursor-pointer hover:text-white transition-colors">
+                    WhatsApp number is same as Phone
+                  </label>
                 </div>
 
-                {regionScope === "India" && (
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">District</label>
-                    {state === "Odisha" ? (
-                      <select
-                        value={district}
-                        onChange={(e) => setDistrict(e.target.value)}
-                        className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors max-h-[150px]"
-                      >
-                        {ODISHA_DISTRICTS.map((dist, idx) => (
-                          <option key={idx} value={dist}>{dist}</option>
-                        ))}
-                      </select>
-                    ) : (
+                {!whatsappSameAsPhone && (
+                  <div className="flex flex-col gap-1.5 animate-fadeIn">
+                    <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">WhatsApp Number</label>
+                    <div className="flex gap-2">
+                      <span className="bg-black/50 border border-[#D4AF37]/20 px-3 py-2.5 rounded-lg text-sm text-[#A0AEC0]">+91</span>
                       <input 
-                        type="text"
-                        value={district}
-                        onChange={(e) => setDistrict(e.target.value)}
-                        placeholder="Enter your district"
-                        required
+                        type="tel" 
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
+                        placeholder="9876543210"
                         className="w-full bg-black/40 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors"
                       />
-                    )}
+                    </div>
                   </div>
                 )}
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">Full Address Details</label>
-                  <textarea 
-                    value={fullAddress}
-                    onChange={(e) => setFullAddress(e.target.value)}
-                    placeholder="Village, Block, Street details, Land mark and Pin-code"
+                  <label className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">City / Location</label>
+                  <input 
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="E.g. Cuttack, Odisha"
                     required
-                    rows={3}
-                    className="w-full bg-black/40 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors resize-none"
+                    className="w-full bg-black/40 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#D4AF37] transition-colors"
                   />
                 </div>
 
                 <button 
                   type="button"
                   onClick={() => {
-                    if (!fullName.trim() || !whatsappNumber.trim() || !fullAddress.trim()) {
+                    if (!fullName.trim() || !phoneNumber.trim() || !location.trim()) {
                       alert("Please fill up all required fields.");
+                      return;
+                    }
+                    if (!whatsappSameAsPhone && !whatsappNumber.trim()) {
+                      alert("Please provide your WhatsApp number.");
                       return;
                     }
                     setProfileStep(2);
