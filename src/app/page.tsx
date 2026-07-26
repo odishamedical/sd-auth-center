@@ -99,11 +99,13 @@ export default function Login() {
           window.location.href = redirectUrl.toString();
         } else {
           // Fallback if token generation fails
-          window.location.href = pendingRedirect;
+          alert("Server failed to generate custom token: " + (data.error || "Unknown error"));
+          // window.location.href = pendingRedirect;
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("SSO Token Bridge Error:", err);
-        window.location.href = pendingRedirect;
+        alert("SSO Token Bridge Error: " + err.message);
+        // window.location.href = pendingRedirect;
       }
     } else {
       // No redirect_uri — go to profile page

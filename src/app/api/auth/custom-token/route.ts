@@ -39,13 +39,11 @@ export async function POST(req: Request) {
       // Generate a secure custom token for the user
       const customToken = await getAuth().createCustomToken(uid);
       return NextResponse.json({ token: customToken });
-    } catch (authError) {
+    } catch (authError: any) {
       console.error('Error creating custom token:', authError);
       
-      // FALLBACK FOR DEVELOPMENT MVP
-      // If Firebase Admin fails (due to missing service account credentials locally),
-      // we return a mock token prefix so the frontend can handle the fallback routing
-      return NextResponse.json({ token: `mock_token_${uid}` });
+      // Return the exact error to the client so the user can debug it on screen!
+      return NextResponse.json({ error: authError.message || "Unknown auth error" }, { status: 500 });
     }
 
   } catch (error) {
