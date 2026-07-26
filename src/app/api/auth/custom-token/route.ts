@@ -1,15 +1,27 @@
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 // Initialize Firebase Admin if not already initialized
 if (!getApps().length) {
   try {
-    // In a real production environment, you would provide the service account credentials here
-    // e.g., credential: admin.credential.cert(serviceAccount)
-    initializeApp({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'sd-auth-center',
-    });
+    const serviceAccount = {
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      // Handle newline characters in the private key from Vercel environment variables
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    };
+
+    if (serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
+      initializeApp({
+        credential: cert(serviceAccount),
+      });
+    } else {
+      // Fallback for local testing without service account
+      initializeApp({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'sd-auth-center',
+      });
+    }
   } catch (error) {
     console.error('Firebase admin initialization error', error);
   }
