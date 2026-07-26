@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
+    const { getApps } = require('firebase-admin/app');
     return new Response(JSON.stringify({ 
       message: "API Route is reachable!",
       hasApps: getApps().length,
@@ -21,6 +22,9 @@ export async function POST(req: Request) {
     if (!uid) {
       return NextResponse.json({ error: 'Missing UID' }, { status: 400 });
     }
+
+    const { getApps, initializeApp, cert } = require('firebase-admin/app');
+    const { getAuth } = require('firebase-admin/auth');
 
     // Initialize Firebase Admin INSIDE the request to ensure env vars are loaded
     if (!getApps().length) {
