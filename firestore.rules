@@ -11,6 +11,14 @@ service cloud.firestore {
       allow write: if request.auth != null;    // Only authenticated users can write
     }
 
+    // ── PUBLIC DIRECTORY ──────────────────────────────────────────────────────
+    // Public directory of hospitals, doctors, labs.
+    // Anyone can search and read it, only authenticated users can write/inject.
+    match /directory/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
     // ── ALL OTHER COLLECTIONS ─────────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if request.auth != null;

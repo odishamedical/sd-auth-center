@@ -83,7 +83,7 @@ export default function Login() {
     return null;
   };
 
-  const completeLoginRouting = (uid: string, email: string, name: string, avatar: string, role: string) => {
+  const completeLoginRouting = async (uid: string, email: string, name: string, avatar: string, role: string) => {
     const pendingRedirect = localStorage.getItem("sd_pending_redirect");
     
     localStorage.setItem("sd_current_user_email", email);
@@ -96,10 +96,29 @@ export default function Login() {
     if (role === "super_admin" || role === "admin" || role === "staff") {
       router.push('/launcher');
     } else if (pendingRedirect) {
-      // SECURE MODE: We no longer pass authentication tokens in the URL.
-      // We just bounce the user back to the app they came from. They will authenticate securely there.
       localStorage.removeItem("sd_pending_redirect");
-      window.location.href = pendingRedirect;
+      try {
+        // Fetch a secure Custom Token to bridge the SSO session across domains
+        const response = await fetch('/api/auth/custom-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid })
+        });
+        const data = await response.json();
+        
+        if (data.token) {
+          // Append the token securely to the redirect URL
+          const redirectUrl = new URL(pendingRedirect);
+          redirectUrl.searchParams.set('token', data.token);
+          window.location.href = redirectUrl.toString();
+        } else {
+          // Fallback if token generation fails
+          window.location.href = pendingRedirect;
+        }
+      } catch (err) {
+        console.error("SSO Token Bridge Error:", err);
+        window.location.href = pendingRedirect;
+      }
     } else {
       // No redirect_uri — go to profile page
       router.push('/profile');
