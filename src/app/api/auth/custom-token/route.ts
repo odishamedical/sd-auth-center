@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+// import { getApps, initializeApp, cert } from 'firebase-admin/app';
+// import { getAuth } from 'firebase-admin/auth';
 
 export async function GET(req: Request) {
   try {
     return new Response(JSON.stringify({ 
       message: "API Route is reachable!",
-      hasApps: getApps().length,
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'missing'
     }), { headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
@@ -22,6 +21,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing UID' }, { status: 400 });
     }
 
+    /* 
     // Initialize Firebase Admin INSIDE the request to ensure env vars are loaded
     if (!getApps().length) {
       const serviceAccount = {
@@ -53,6 +53,8 @@ export async function POST(req: Request) {
       console.error('Error creating custom token:', authError);
       return NextResponse.json({ error: authError.message || "Unknown auth error" }, { status: 500 });
     }
+    */
+    return NextResponse.json({ token: "MOCK_TOKEN_FOR_TESTING" });
 
   } catch (error: any) {
     console.error('API Error:', error);
