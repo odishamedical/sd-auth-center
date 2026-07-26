@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { SignJWT, importPKCS8 } from 'jose';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 export async function GET(req: Request) {
   try {
     return new Response(JSON.stringify({ 
       message: "API Route is reachable!",
-      hasApps: getApps().length,
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'missing'
     }), { headers: { 'Content-Type': 'application/json' } });
   } catch (err: any) {
@@ -25,36 +22,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing UID' }, { status: 400 });
     }
 
-    // Initialize Firebase Admin INSIDE the request to ensure env vars are loaded
-    if (!getApps().length) {
-      const serviceAccount = {
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"|"$/g, ''),
-      };
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n').replace(/^"|"$/g, '');
 
-      if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
-        return NextResponse.json({ 
-          error: `Missing Service Account Credentials. ProjectID: ${!!serviceAccount.projectId}, Email: ${!!serviceAccount.clientEmail}, Key: ${!!serviceAccount.privateKey}` 
-        }, { status: 500 });
-      }
+    if (!projectId || !clientEmail || !privateKey) {
+      return NextResponse.json({ 
+        error: `Missing Service Account Credentials. ProjectID: ${!!projectId}, Email: ${!!clientEmail}, Key: ${!!privateKey}` 
+      }, { status: 500 });
+    }
 
-      try {
-        initializeApp({
-          credential: cert(serviceAccount),
-        });
-      } catch (initErr: any) {
-        return NextResponse.json({ error: 'Firebase Admin Init Error: ' + initErr.message }, { status: 500 });
-      }
+    let privateKeyObj;
+    try {
+      privateKeyObj = await importPKCS8(privateKey, 'RS256');
+    } catch (keyErr: any) {
+      return NextResponse.json({ error: 'Failed to parse Private Key: ' + keyErr.message }, { status: 500 });
     }
 
     try {
-      // Generate a secure custom token for the user
-      const customToken = await getAuth().createCustomToken(uid);
+      const iat = Math.floor(Date.now() / 1000);
+      const exp = iat + 60 * 60; // 1 hour expiration
+
+      // Generate a secure custom token manually using jose (bypasses firebase-admin)
+      const customToken = await new SignJWT({ uid: uid })
+        .setProtectedHeader({ alg: 'RS256' })
+        .setIssuedAt(iat)
+        .setExpirationTime(exp)
+        .setIssuer(clientEmail)
+        .setSubject(clientEmail)
+        .setAudience('https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit')
+        .sign(privateKeyObj);
+
       return NextResponse.json({ token: customToken });
     } catch (authError: any) {
       console.error('Error creating custom token:', authError);
-      return NextResponse.json({ error: authError.message || "Unknown auth error" }, { status: 500 });
+      return NextResponse.json({ error: 'Token Gen Error: ' + authError.message }, { status: 500 });
     }
 
   } catch (error: any) {
