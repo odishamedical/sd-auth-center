@@ -71,7 +71,7 @@ export default function Login() {
     return null;
   };
 
-  const completeLoginRouting = async (uid: string, email: string, name: string, avatar: string, role: string) => {
+  const completeLoginRouting = async (uid: string, email: string, name: string, avatar: string, role: string, preflightTokenPromise?: Promise<Response>) => {
     const pendingRedirect = localStorage.getItem("sd_pending_redirect");
     
     localStorage.setItem("sd_current_user_email", email);
@@ -88,12 +88,14 @@ export default function Login() {
       localStorage.removeItem("sd_pending_redirect");
       try {
         setAuthStatusText("GENERATING SECURE SSO TOKEN...");
-        // Fetch a secure Custom Token to bridge the SSO session across domains
-        const response = await fetch('/api/auth/custom-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ uid })
-        });
+        // Fetch a secure Custom Token to bridge the SSO session across domains (or use the pre-flighted one)
+        const response = preflightTokenPromise 
+          ? await preflightTokenPromise 
+          : await fetch('/api/auth/custom-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid })
+            });
 
         // Debug raw response
         if (!response.ok) {
@@ -136,12 +138,24 @@ export default function Login() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      setAuthStatusText("CHECKING PROFILE STATUS...");
+      setAuthStatusText("VERIFYING & GENERATING TOKEN...");
 
       const finalName = user.displayName || user.email?.split("@")[0] || "User";
       const finalAvatar = user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80";
 
       let userRole = "user";
+
+      // OPTIMIZATION: Fire the Token Generation API Call IN PARALLEL with the Firestore Document check!
+      const pendingRedirect = localStorage.getItem("sd_pending_redirect");
+      let tokenPromise: Promise<Response> | undefined = undefined;
+      
+      if (pendingRedirect) {
+        tokenPromise = fetch('/api/auth/custom-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: user.uid })
+        });
+      }
 
       // Check profile in Firestore first
       try {
@@ -176,12 +190,12 @@ export default function Login() {
           return;
         }
 
-        // Complete Routing if okay
-        completeLoginRouting(user.uid, user.email || "", finalName, finalAvatar, dbRole);
+        // Complete Routing if okay (pass the preflighted token to save time)
+        completeLoginRouting(user.uid, user.email || "", finalName, finalAvatar, dbRole, tokenPromise);
 
       } catch (firestoreErr) {
         console.warn("Firestore check failed, running fallback router...", firestoreErr);
-        completeLoginRouting(user.uid, user.email || "", finalName, finalAvatar, userRole);
+        completeLoginRouting(user.uid, user.email || "", finalName, finalAvatar, userRole, tokenPromise);
       }
     } catch (error: any) {
       console.error("Google OAuth Error:", error);
