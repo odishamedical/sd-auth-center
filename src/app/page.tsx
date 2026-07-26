@@ -81,10 +81,7 @@ export default function Login() {
     localStorage.setItem("sd_current_user_uid", uid);
     localStorage.setItem("sd_current_user_profile_complete", "true");
 
-    if (role === "super_admin" || role === "admin" || role === "staff") {
-      setAuthStatusText("REDIRECTING TO LAUNCHER...");
-      router.push('/launcher');
-    } else if (pendingRedirect) {
+    if (pendingRedirect) {
       localStorage.removeItem("sd_pending_redirect");
       try {
         setAuthStatusText("GENERATING SECURE SSO TOKEN...");
@@ -110,6 +107,11 @@ export default function Login() {
           // Append the token securely to the redirect URL
           const redirectUrl = new URL(pendingRedirect);
           redirectUrl.searchParams.set('token', data.token);
+          // Also append fallback SSO params for hubs that don't use Firebase locally (like IT Hub)
+          redirectUrl.searchParams.set('sso_email', email);
+          redirectUrl.searchParams.set('sso_name', name);
+          redirectUrl.searchParams.set('sso_avatar', avatar);
+          redirectUrl.searchParams.set('sso_role', role);
           window.location.href = redirectUrl.toString();
         } else {
           // Fallback if token generation fails
@@ -123,6 +125,9 @@ export default function Login() {
         setLoading(false);
         setAuthStatusText("SIGN IN WITH GMAIL");
       }
+    } else if (role === "super_admin" || role === "admin" || role === "staff") {
+      setAuthStatusText("REDIRECTING TO LAUNCHER...");
+      router.push('/launcher');
     } else {
       setAuthStatusText("REDIRECTING TO PROFILE...");
       // No redirect_uri — go to profile page
