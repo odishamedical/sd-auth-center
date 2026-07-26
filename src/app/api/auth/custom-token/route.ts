@@ -3,11 +3,15 @@ import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 export async function GET(req: Request) {
-  return NextResponse.json({ 
-    message: "API Route is reachable!",
-    hasApps: getApps().length,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'missing'
-  });
+  try {
+    return new Response(JSON.stringify({ 
+      message: "API Route is reachable!",
+      hasApps: getApps().length,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'missing'
+    }), { headers: { 'Content-Type': 'application/json' } });
+  } catch (err: any) {
+    return new Response(`GET CRASHED: ${err.message}\nStack: ${err.stack}`, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
