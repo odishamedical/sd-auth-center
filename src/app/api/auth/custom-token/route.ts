@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 
 // Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
     // In a real production environment, you would provide the service account credentials here
     // e.g., credential: admin.credential.cert(serviceAccount)
-    admin.initializeApp({
+    initializeApp({
       projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'sd-auth-center',
     });
   } catch (error) {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
 
     try {
       // Generate a secure custom token for the user
-      const customToken = await admin.auth().createCustomToken(uid);
+      const customToken = await getAuth().createCustomToken(uid);
       return NextResponse.json({ token: customToken });
     } catch (authError) {
       console.error('Error creating custom token:', authError);
