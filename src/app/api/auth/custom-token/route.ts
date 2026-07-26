@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
+export async function GET(req: Request) {
+  return NextResponse.json({ 
+    message: "API Route is reachable!",
+    hasApps: getApps().length,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'missing'
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const { uid } = await req.json();
