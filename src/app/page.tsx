@@ -249,7 +249,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true); setErrorMsg(null);
     setTimeout(() => {
-      const role = "user";
+      const role: string = "user";
       localStorage.setItem("sd_current_user_email", email);
       localStorage.setItem("sd_current_user_name", email.split("@")[0]);
       localStorage.setItem("sd_current_user_role", role);
