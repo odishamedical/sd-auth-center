@@ -278,21 +278,21 @@ export default function Login() {
       <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-[#0A0F1E] rounded-full blur-[150px]" />
 
       {!showProfileModal ? (
-        <div className="z-10 w-full max-w-md p-8">
-          <div className="sd-glass-card p-10 flex flex-col items-center">
-            <div className="mb-8 w-24 h-24 relative flex items-center justify-center bg-black/40 rounded-full border border-[#D4AF37]/30 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
+        <div className="z-10 w-full max-w-md p-6 sm:p-8">
+          <div className="sd-glass-card p-6 sm:p-10 flex flex-col items-center">
+            <div className="mb-6 w-20 h-20 relative flex items-center justify-center bg-black/40 rounded-full border border-[#D4AF37]/30 shadow-[0_0_20px_rgba(212,175,55,0.2)]">
               <Image 
                 src="/sd_logo.png" 
                 alt="Shyam Dash Logo" 
-                width={60} 
-                height={60} 
+                width={50} 
+                height={50} 
                 className="object-contain"
                 priority
               />
             </div>
             
-            <h1 className="text-3xl font-light tracking-wider mb-2 text-white">SD AUTH CENTER</h1>
-            <p className="text-[#A0AEC0] text-sm mb-8 tracking-widest uppercase">Universal Ecosystem Login</p>
+            <h1 className="text-2xl sm:text-3xl font-light tracking-wider mb-2 text-white">SD AUTH CENTER</h1>
+            <p className="text-[#A0AEC0] text-xs sm:text-sm mb-6 tracking-widest uppercase text-center">Universal Ecosystem Login</p>
 
             {errorMsg && (
               <div className="w-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-lg mb-6 text-center">
@@ -300,55 +300,13 @@ export default function Login() {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="w-full flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-widest text-[#A0AEC0] font-semibold">Master Email</label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4AF37] transition-colors"
-                  placeholder="admin@shyamdash.com"
-                />
-              </div>
-              
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-widest text-[#A0AEC0] font-semibold">Secure Password</label>
-                <input 
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#D4AF37] transition-colors"
-                  placeholder="••••••••••••"
-                />
-              </div>
-
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="sd-button-luxury mt-4 flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-[#0A0F1E] border-t-transparent rounded-full animate-spin" />
-                ) : "AUTHENTICATE"}
-              </button>
-            </form>
-
-            {/* Google Login Section */}
-            <div className="w-full mt-6 flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <div className="h-px bg-[#D4AF37]/20 flex-1" />
-                <span className="text-[10px] text-[#A0AEC0] tracking-widest uppercase">Or</span>
-                <div className="h-px bg-[#D4AF37]/20 flex-1" />
-              </div>
-
+            {/* Google Login Section (Moved to Top) */}
+            <div className="w-full mb-6 flex flex-col gap-4">
               <button 
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg px-4 py-3 transition-colors cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-wait"
+                className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg px-4 py-3.5 transition-colors cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-wait"
               >
                 {!loading && (
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -363,7 +321,49 @@ export default function Login() {
                 )}
                 <span className="text-sm font-semibold tracking-wider">{authStatusText}</span>
               </button>
+
+              <div className="flex items-center gap-4 mt-2">
+                <div className="h-px bg-[#D4AF37]/20 flex-1" />
+                <span className="text-[10px] text-[#A0AEC0] tracking-widest uppercase">Or continue with</span>
+                <div className="h-px bg-[#D4AF37]/20 flex-1" />
+              </div>
             </div>
+
+            <form onSubmit={handleLogin} className="w-full flex flex-col gap-5">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-widest text-[#A0AEC0] font-semibold">Master Email</label>
+                <input 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#D4AF37] transition-colors text-sm"
+                  placeholder="admin@shyamdash.com"
+                />
+              </div>
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] uppercase tracking-widest text-[#A0AEC0] font-semibold">Secure Password</label>
+                <input 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full bg-black/50 border border-[#D4AF37]/20 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-[#D4AF37] transition-colors text-sm"
+                  placeholder="••••••••••••"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="sd-button-luxury mt-2 flex items-center justify-center gap-2 cursor-pointer py-3"
+              >
+                {loading ? (
+                  <div className="w-5 h-5 border-2 border-[#0A0F1E] border-t-transparent rounded-full animate-spin" />
+                ) : "AUTHENTICATE"}
+              </button>
+            </form>
 
             <div className="mt-8 pt-6 border-t border-[#D4AF37]/10 w-full text-center">
               <p className="text-[10px] text-[#A0AEC0]/60 uppercase tracking-widest">Secured by Firebase Enterprise</p>
