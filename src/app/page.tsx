@@ -21,6 +21,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [authStatusText, setAuthStatusText] = useState("SIGN IN WITH GMAIL");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Profile Modal State
@@ -37,7 +38,7 @@ export default function Login() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [whatsappConsent, setWhatsappConsent] = useState(true);
 
-  // Capture Referral Code and Redirect URI from URL
+  // Capture Referral Code and Redirect URI from URL, and pre-warm Serverless Function
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -51,8 +52,9 @@ export default function Login() {
       if (redirectUri) {
         localStorage.setItem("sd_pending_redirect", redirectUri);
       }
-      // If no redirect_uri in URL but we have a stale value, keep it
-      // (user may have navigated back after being sent to /profile)
+
+      // PRE-WARM the serverless token bridge to eliminate cold-start delays
+      fetch('/api/auth/custom-token').catch(() => {});
     }
   }, []);
 
@@ -80,10 +82,12 @@ export default function Login() {
     localStorage.setItem("sd_current_user_profile_complete", "true");
 
     if (role === "super_admin" || role === "admin" || role === "staff") {
+      setAuthStatusText("REDIRECTING TO LAUNCHER...");
       router.push('/launcher');
     } else if (pendingRedirect) {
       localStorage.removeItem("sd_pending_redirect");
       try {
+        setAuthStatusText("GENERATING SECURE SSO TOKEN...");
         // Fetch a secure Custom Token to bridge the SSO session across domains
         const response = await fetch('/api/auth/custom-token', {
           method: 'POST',
@@ -100,6 +104,7 @@ export default function Login() {
         const data = await response.json();
         
         if (data.token) {
+          setAuthStatusText("REDIRECTING TO APP...");
           // Append the token securely to the redirect URL
           const redirectUrl = new URL(pendingRedirect);
           redirectUrl.searchParams.set('token', data.token);
@@ -107,14 +112,17 @@ export default function Login() {
         } else {
           // Fallback if token generation fails
           alert("Server failed to generate custom token: " + (data.error || "Unknown error"));
-          // window.location.href = pendingRedirect;
+          setLoading(false);
+          setAuthStatusText("SIGN IN WITH GMAIL");
         }
       } catch (err: any) {
         console.error("SSO Token Bridge Error:", err);
         alert("SSO Token Bridge Error: " + err.message);
-        // window.location.href = pendingRedirect;
+        setLoading(false);
+        setAuthStatusText("SIGN IN WITH GMAIL");
       }
     } else {
+      setAuthStatusText("REDIRECTING TO PROFILE...");
       // No redirect_uri — go to profile page
       router.push('/profile');
     }
@@ -122,10 +130,13 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setAuthStatusText("WAITING FOR GOOGLE...");
     setErrorMsg(null);
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+
+      setAuthStatusText("CHECKING PROFILE STATUS...");
 
       const finalName = user.displayName || user.email?.split("@")[0] || "User";
       const finalAvatar = user.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80";
@@ -161,6 +172,7 @@ export default function Login() {
           setProfileStep(1);
           setShowProfileModal(true);
           setLoading(false);
+          setAuthStatusText("SIGN IN WITH GMAIL");
           return;
         }
 
@@ -175,6 +187,7 @@ export default function Login() {
       console.error("Google OAuth Error:", error);
       setErrorMsg(error.message || "Authentication failed.");
       setLoading(false);
+      setAuthStatusText("SIGN IN WITH GMAIL");
     }
   };
 
@@ -335,15 +348,20 @@ export default function Login() {
                 type="button"
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg px-4 py-3 transition-colors cursor-pointer shadow-sm"
+                className="w-full flex items-center justify-center gap-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg px-4 py-3 transition-colors cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-wait"
               >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                <span className="text-sm font-semibold tracking-wider">SIGN IN WITH GMAIL</span>
+                {!loading && (
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                )}
+                {loading && (
+                  <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                )}
+                <span className="text-sm font-semibold tracking-wider">{authStatusText}</span>
               </button>
             </div>
 
