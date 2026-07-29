@@ -181,7 +181,7 @@ export default function Login() {
         }
 
         // Intercept standard users with incomplete profiles
-        if (dbRole !== "super_admin" && dbRole !== "admin" && dbRole !== "staff" && !isProfileComplete) {
+        if (dbRole !== "super_admin" && dbRole !== "admin" && dbRole !== "staff" && !dbRole.endsWith("_staff") && !isProfileComplete) {
           // Save pending redirect before showing profile modal
           // (it's already in localStorage from the useEffect above)
           setTempUser(user);
