@@ -38,15 +38,19 @@ export default function Login() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [whatsappConsent, setWhatsappConsent] = useState(true);
 
-  // Capture Referral Code and Redirect URI from URL, and pre-warm Serverless Function
+  // Capture Referral Code, Redirect URI, and Origin from URL, and pre-warm Serverless Function
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get("ref");
       const redirectUri = params.get("redirect_uri");
+      const origin = params.get("origin");
       
       if (ref) {
         localStorage.setItem("sd_pending_referral", ref);
+      }
+      if (origin) {
+        localStorage.setItem("sd_pending_origin", origin);
       }
       // Always update sd_pending_redirect from URL if present (overwrite stale values)
       if (redirectUri) {
@@ -172,7 +176,10 @@ export default function Login() {
 
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
-          if (data.role) {
+          if (data.roles) {
+            const origin = localStorage.getItem("sd_pending_origin") || "sd-auth-center";
+            dbRole = data.roles[origin] || "user";
+          } else if (data.role) {
             dbRole = data.role;
           }
           if (data.isProfileComplete) {
@@ -222,6 +229,7 @@ export default function Login() {
     try {
       const userDocRef = doc(db, "users", tempUser.uid);
       const pendingReferral = localStorage.getItem("sd_pending_referral") || null;
+      const pendingOrigin = localStorage.getItem("sd_pending_origin") || 'sd-auth-center';
       
       const profileDetails = {
         phoneNumber: phoneNumber,
@@ -237,7 +245,10 @@ export default function Login() {
         email: tempUser.email,
         displayName: fullName,
         profilePhoto: tempUser.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
-        role: "user",
+        roles: {
+          [pendingOrigin]: "user"
+        },
+        registrationSource: pendingOrigin,
         isProfileComplete: true,
         createdAt: serverTimestamp(),
         lastLogin: serverTimestamp(),
@@ -248,6 +259,9 @@ export default function Login() {
 
       if (pendingReferral) {
         localStorage.removeItem("sd_pending_referral");
+      }
+      if (pendingOrigin !== 'sd-auth-center') {
+        localStorage.removeItem("sd_pending_origin");
       }
 
       setShowProfileModal(false);
